@@ -1,0 +1,34 @@
+[project]
+name = "junction26"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Joel Kronqvist", email = "joel.kronqvist@iki.fi" },
+    { name = "Rasmus Pouta", email = "rasmus.pouta@gmail.com" },
+    { name = "Sampsa Laine", email = "sampsa.laine@aalto.fi" },
+    { name = "Rasmus Aaen", email = "aaen.rasmus@gmail.com" },
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+junction26 = "junction26.__init__:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pyright>=1.1.414",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["test", "src"]
+addopts = [
+    "--doctest-modules",
+    "-v",
+]
