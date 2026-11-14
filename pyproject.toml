@@ -30,6 +30,7 @@ junction26 = "src.agents.main:main"
 arena = "src.agents.main:run_app"
 cad-sim = "src.agents.cad_cli:main"
 harbor-tasks = "src.agents.harbor_sync:main"
+build-site = "src.agents.site_builder:main"
 
 [dependency-groups]
 dev = [
