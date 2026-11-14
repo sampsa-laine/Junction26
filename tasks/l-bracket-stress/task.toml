@@ -37,6 +37,8 @@ mcp_servers = []
 PYTHONPATH = "/opt"
 CAD_PROBLEM_PATH = "/app/problem.json"
 CAD_DESIGN_PATH = "/app/design.json"
+CAD_TIME_LIMIT_SEC = "600"
+CAD_TARGET_FINISH_SEC = "540"
 
 [solution.env]
 PYTHONPATH = "/solution:/opt"

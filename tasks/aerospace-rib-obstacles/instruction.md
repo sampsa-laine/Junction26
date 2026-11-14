@@ -1,0 +1,95 @@
+# 2D Structural CAD Design Task: Aerospace Rib with Obstacle Tunnels
+
+## Objective
+Engineer a lightweight, manufacturable 2D parametric CAD component saved at `/app/design.json`.
+Starting from the stock plate in `/app/problem.json`, apply Constructive Solid Geometry (CSG) cutouts so the component meets the target mass budget while **minimizing structural compliance** (maximizing stiffness) across all load cases.
+
+## Problem Specification & Engineering Constraints
+- **Domain Bounding Box**: `80.0 x 40.0` (`64 x 32` Q4 finite element mesh)
+- **Target Volume Fraction**: `<= 0.350` (measured relative to `80 x 40` bounding box)
+- **Maximum von Mises Stress Limit**: `<= 2.050`
+- **Minimum Cutout Feature Radius / Half-Width**: `>= 1.50`
+- **Minimum Solid Wall Thickness**: `>= 1.60` (avoid paper-thin slivers or fragile bridges)
+- **Maximum Parametric Cutouts**: `<= 22` actions
+- **External Load Cases**:
+  - **Load Case 1**: `(x=74.0, y=32.0, fx=+0.00, fy=-1.10)`, `(x=74.0, y=8.0, fx=+0.00, fy=-0.70)`
+  - **Load Case 2**: `(x=74.0, y=32.0, fx=-0.80, fy=+0.90)`, `(x=42.0, y=35.0, fx=+0.40, fy=-1.00)`
+  - **Load Case 3**: `(x=74.0, y=8.0, fx=+0.70, fy=+1.10)`, `(x=42.0, y=35.0, fx=-0.60, fy=+0.80)`
+- **Keep-Out Regions** (`SOLID` bosses cannot be cut; `VOID` zones are pre-cut):
+  - `SOLID` rect: params `(0.0, 0.0, 3.0, 40.0)`
+  - `SOLID` circle: params `(74.0, 32.0, 4.0)`
+  - `SOLID` circle: params `(74.0, 8.0, 4.0)`
+  - `SOLID` circle: params `(42.0, 35.0, 3.5)`
+  - `VOID` circle: params `(30.0, 20.0, 4.0)`
+  - `VOID` circle: params `(54.0, 20.0, 4.0)`
+
+### Engineering Note
+Two circular VOID pass-through tunnels at (28, 20) and (54, 20) block the mid-web, while THREE independent load cases pull on 3 solid mounting lugs at (74, 32), (74, 8), and (42, 35). You must route clean filleted truss chords above and below the tunnels while staying <= 35% volume and <= 2.05 stress.
+
+---
+
+## Interactive Workbench Tools
+
+### 1. Command-Line Tool (`cad-sim`)
+Run `cad-sim` from anywhere to inspect the problem, apply CSG cutouts to `/app/design.json`, and run `<15ms` Q4 Finite Element Analysis (FEA):
+
+```bash
+# Inspect full specification & boundary conditions
+cad-sim info
+
+# Evaluate FEA compliance, stress hotspots, low-strain zones, and ASCII stress heatmap
+cad-sim status --ascii
+
+# Apply parametric CSG cutouts (automatically updates /app/design.json and runs FEA)
+cad-sim cut-circle --x 30.0 --y 15.0 --r 4.5
+cad-sim cut-slot --x1 18.0 --y1 12.0 --x2 38.0 --y2 12.0 --r 3.0
+cad-sim cut-rect --x 20.0 --y 8.0 --w 12.0 --h 6.0 --fillet 2.0
+cad-sim cut-polygon --points "25,28 55,28 55,14" --fillet 1.8
+
+# Undo last cut or reset to uncut stock plate
+cad-sim undo
+cad-sim reset
+
+# Optional: export CAD vector geometry
+cad-sim export --svg /app/design.svg --dxf /app/design.dxf
+```
+
+### 2. Python Simulation API (`cad_env`)
+You may also write and execute Python optimization/search scripts directly against the pre-installed `cad_env` package (`/opt/cad_env`):
+
+```python
+from cad_env import CADModel, DesignProblem, FEASolver, inspect_design
+
+problem = DesignProblem.load_json("/app/problem.json")
+solver = FEASolver(problem)
+model = CADModel(problem)
+
+model.cut_polygon([(25.0, 28.0), (56.0, 28.0), (56.0, 14.0)], fillet_radius=1.8)
+model.cut_circle(22.0, 14.0, radius=4.0)
+
+report = inspect_design(problem, model)
+print(
+    report["volume_fraction"],
+    report["total_compliance"],
+    report["max_von_mises_stress"],
+)
+
+# Always save your final CAD model to /app/design.json
+model.save_json("/app/design.json")
+```
+
+### Time Budget & Fast Workflow Tips (10-Minute Hard Limit — Finish in <= 9 Minutes)
+- **Hard 10-minute timeout (`600s`) — finish within `9` minutes (`540s`)**: Your session will be forcefully terminated at **10 minutes**. Budget your time so you finalize `/app/design.json` and **stop within 9 minutes** (leaving a 60s safety margin). `cad-sim` also displays your elapsed time and remaining 9-minute budget on each run; if you reach ~8–9 minutes, stop iterating immediately and keep your best valid `/app/design.json`.
+- **Save early, update often**: Write a valid, connected `/app/design.json` within your first 2–3 steps, and overwrite `/app/design.json` immediately whenever you find an improved valid design.
+- **Keep scripts fast (`< 5s`)**: Each `FEASolver.solve()` takes ~15ms, so keep any Python search/optimization script under **150–200 evaluations** (use `model.to_density_grid(subgrid=1)` during fast inner loops, then verify once with `inspect_design()`). Avoid long `scipy.optimize` sweeps or writing many successive refinement scripts.
+- **Stop once satisfied**: Once you hit the target volume fraction, stress limit, wall-thickness check, and strong stiffness, save `/app/design.json` and finish.
+
+---
+
+## Scoring & Verification (`/logs/verifier/reward.txt`)
+Your final `/app/design.json` is graded on a **continuous scale from `0.0` to `1.0`**:
+- **Hard Validity Checks (`0.0` if violated)**:
+  1. `/app/design.json` must exist, parse cleanly, remove at least `2%` area, use `<= 22` cutouts, and obey `min_feature_radius >= 1.50`.
+  2. A single connected solid structure must join the supports to **all** load points without floating solid islands or severed load paths.
+- **Continuous Partial Credit (`0.0` to `1.0`)**:
+  - Combines **stiffness efficiency** relative to the theoretical topological optimum ($C^*$), **volume budget satisfaction** (`1.0` when `volume_fraction <= 0.350 + 0.005`, smoothly penalized if over budget), **von Mises stress compliance** (`<= 2.050`), and **minimum wall thickness** (`>= 1.60`).

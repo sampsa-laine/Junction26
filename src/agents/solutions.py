@@ -60,6 +60,13 @@ PROBLEM_PRESETS: dict[str, ProblemPreset] = {
         task_id="suspension-rocker-multiload",
         builder=HARBOR_TASK_BUILDERS["suspension-rocker-multiload"],
     ),
+    "aerospace-rib-obstacles": ProblemPreset(
+        key="aerospace-rib-obstacles",
+        display_name="Harbor 4: Aerospace Rib with Obstacle Tunnels",
+        is_harbor_task=True,
+        task_id="aerospace-rib-obstacles",
+        builder=HARBOR_TASK_BUILDERS["aerospace-rib-obstacles"],
+    ),
     "cantilever": ProblemPreset(
         key="cantilever",
         display_name="Arena: Cantilever Beam",
@@ -97,6 +104,8 @@ _PROBLEM_NAME_TO_PRESET_KEY: dict[str, str] = {
     "l-bracket-stress": "l-bracket-stress",
     "multi-load suspension rocker": "suspension-rocker-multiload",
     "suspension-rocker-multiload": "suspension-rocker-multiload",
+    "aerospace rib with obstacle tunnels": "aerospace-rib-obstacles",
+    "aerospace-rib-obstacles": "aerospace-rib-obstacles",
     "cantilever beam": "cantilever",
     "cantilever": "cantilever",
     "mbb beam": "mbb",
@@ -398,11 +407,12 @@ def evaluate_cad_verification(
     else:
         stress_factor = 1.0
 
+    _, smoothness_factor = model.check_boundary_smoothness()
     if wall_ok:
-        manufacturability_factor = 1.0
+        manufacturability_factor = float(smoothness_factor)
     else:
-        sliver_pen = max(0.55, 1.0 - 2.5 * sliver_ratio)
-        manufacturability_factor = float(0.80 * sliver_pen)
+        sliver_pen = max(0.45, 1.0 - 3.0 * sliver_ratio)
+        manufacturability_factor = float(0.40 * sliver_pen * smoothness_factor)
 
     raw_reward = (
         stiffness_factor * volume_factor * stress_factor * manufacturability_factor

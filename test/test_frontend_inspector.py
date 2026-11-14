@@ -66,6 +66,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
                 "cantilever-lightweight": 0.45,
                 "l-bracket-stress": 0.36,
                 "suspension-rocker-multiload": 0.40,
+                "aerospace-rib-obstacles": 0.35,
             }
 
             for idx, (task_id, builder) in enumerate(HARBOR_TASK_BUILDERS.items()):
@@ -130,8 +131,8 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
                     (ver_dir / "reward.txt").write_text("0.7777\n")
 
             discovered = discover_harbor_runs(jobs_root)
-            self.assertEqual(len(discovered), 3)
-            self.assertEqual(len(discover_harbor_runs(job_dir)), 3)
+            self.assertEqual(len(discovered), 4)
+            self.assertEqual(len(discover_harbor_runs(job_dir)), 4)
             self.assertEqual(len(discover_harbor_runs(discovered[0])), 1)
 
             loaded_records = [load_harbor_trial(p) for p in discovered]
@@ -158,7 +159,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
             self.assertAlmostEqual(cant_rec.harbor_reward or 0.0, 0.7777, places=4)
 
             rows = build_comparison_rows(loaded_records)
-            self.assertEqual(len(rows), 3)
+            self.assertEqual(len(rows), 4)
 
     def test_existing_workspace_harbor_jobs_load_when_present(self) -> None:
         workspace_trials = discover_harbor_runs("jobs")

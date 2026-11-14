@@ -53,6 +53,17 @@ TASK_METADATA = {
             "load case. Preserve triangulated load paths serving both load vectors."
         ),
     },
+    "aerospace-rib-obstacles": {
+        "difficulty": "hard",
+        "expert_min": 45.0,
+        "junior_min": 120.0,
+        "challenge_note": (
+            "Two circular VOID pass-through tunnels at (28, 20) and (54, 20) block the "
+            "mid-web, while THREE independent load cases pull on 3 solid mounting lugs "
+            "at (74, 32), (74, 8), and (42, 35). You must route clean filleted truss "
+            "chords above and below the tunnels while staying <= 35% volume and <= 2.05 stress."
+        ),
+    },
 }
 
 
@@ -98,6 +109,8 @@ mcp_servers = []
 PYTHONPATH = "/opt"
 CAD_PROBLEM_PATH = "/app/problem.json"
 CAD_DESIGN_PATH = "/app/design.json"
+CAD_TIME_LIMIT_SEC = "600"
+CAD_TARGET_FINISH_SEC = "540"
 
 [solution.env]
 PYTHONPATH = "/solution:/opt"
@@ -201,7 +214,8 @@ print(
 model.save_json("/app/design.json")
 ```
 
-### Time Budget & Fast Workflow Tips
+### Time Budget & Fast Workflow Tips (10-Minute Hard Limit — Finish in <= 9 Minutes)
+- **Hard 10-minute timeout (`600s`) — finish within `9` minutes (`540s`)**: Your session will be forcefully terminated at **10 minutes**. Budget your time so you finalize `/app/design.json` and **stop within 9 minutes** (leaving a 60s safety margin). `cad-sim` also displays your elapsed time and remaining 9-minute budget on each run; if you reach ~8–9 minutes, stop iterating immediately and keep your best valid `/app/design.json`.
 - **Save early, update often**: Write a valid, connected `/app/design.json` within your first 2–3 steps, and overwrite `/app/design.json` immediately whenever you find an improved valid design.
 - **Keep scripts fast (`< 5s`)**: Each `FEASolver.solve()` takes ~15ms, so keep any Python search/optimization script under **150–200 evaluations** (use `model.to_density_grid(subgrid=1)` during fast inner loops, then verify once with `inspect_design()`). Avoid long `scipy.optimize` sweeps or writing many successive refinement scripts.
 - **Stop once satisfied**: Once you hit the target volume fraction, stress limit, wall-thickness check, and strong stiffness, save `/app/design.json` and finish.
