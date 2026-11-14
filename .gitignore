@@ -1,5 +1,4 @@
 *.env
-./__pycache__/
 *.pyc
 .venv/
 __pycache__/
@@ -8,4 +7,6 @@ __pycache__/
 .ruff_cache/
 dist/
 .env
+\#*
+~*
 jobs/

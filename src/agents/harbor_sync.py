@@ -1,4 +1,5 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 import shutil
@@ -7,6 +8,7 @@ import subprocess
 import sys
 
 from .csg import CADModel
+from .fea import FEASolver
 from .problem import HARBOR_TASK_BUILDERS, DesignProblem
 
 
@@ -97,7 +99,7 @@ collect = []
 [verifier.env]
 
 [agent]
-timeout_sec = 600.0
+timeout_sec = 900.0
 
 [environment]
 network_mode = "public"
@@ -141,6 +143,12 @@ def _render_instruction_md(task_id: str, problem: DesignProblem) -> str:
         else "Unconstrained"
     )
 
+    stock_model = CADModel(problem)
+    stock_fea = FEASolver(problem).solve(stock_model.to_density_grid(), penalty=1.0)
+    stock_vol = stock_model.get_stock_volume_fraction()
+    stock_vm = float(stock_fea.von_mises_stress.max())
+    stock_cases = ", ".join(f"{c:.2f}" for c in stock_fea.case_compliances)
+
     return f"""# 2D Structural CAD Design Task: {problem.name}
 
 ## Objective
@@ -158,16 +166,16 @@ Starting from the stock plate in `/app/problem.json`, apply Constructive Solid G
 {cases_block}
 - **Keep-Out Regions** (`SOLID` bosses cannot be cut; `VOID` zones are pre-cut):
 {keepout_block}
+- **Uncut Stock Baseline**: `volume_fraction = {stock_vol:.4f}`, `total_compliance = {stock_fea.compliance:.2f}` (`case_compliances = [{stock_cases}]`), `max_von_mises_stress = {stock_vm:.4f}`
 
 ### Engineering Note
 {meta["challenge_note"]}
 
 ---
 
-## Interactive Workbench Tools
+## Interactive Workbench Tool (`cad-sim`)
 
-### 1. Command-Line Tool (`cad-sim`)
-Run `cad-sim` from anywhere to inspect the problem, apply CSG cutouts to `/app/design.json`, and run `<15ms` Q4 Finite Element Analysis (FEA):
+**Use only `cad-sim` CLI commands** to inspect the problem, apply CSG cutouts to `/app/design.json`, and evaluate FEA feedback (`<15ms` per call). **Do not write or run Python optimization/search scripts or import `cad_env` directly.**
 
 ```bash
 # Inspect full specification & boundary conditions
@@ -190,35 +198,10 @@ cad-sim reset
 cad-sim export --svg /app/design.svg --dxf /app/design.dxf
 ```
 
-### 2. Python Simulation API (`cad_env`)
-You may also write and execute Python optimization/search scripts directly against the pre-installed `cad_env` package (`/opt/cad_env`):
-
-```python
-from cad_env import CADModel, DesignProblem, FEASolver, inspect_design
-
-problem = DesignProblem.load_json("/app/problem.json")
-solver = FEASolver(problem)
-model = CADModel(problem)
-
-model.cut_polygon([(25.0, 28.0), (56.0, 28.0), (56.0, 14.0)], fillet_radius=1.8)
-model.cut_circle(22.0, 14.0, radius=4.0)
-
-report = inspect_design(problem, model)
-print(
-    report["volume_fraction"],
-    report["total_compliance"],
-    report["max_von_mises_stress"],
-)
-
-# Always save your final CAD model to /app/design.json
-model.save_json("/app/design.json")
-```
-
-### Time Budget & Fast Workflow Tips (10-Minute Hard Limit — Finish in <= 9 Minutes)
-- **Hard 10-minute timeout (`600s`) — finish within `9` minutes (`540s`)**: Your session will be forcefully terminated at **10 minutes**. Budget your time so you finalize `/app/design.json` and **stop within 9 minutes** (leaving a 60s safety margin). `cad-sim` also displays your elapsed time and remaining 9-minute budget on each run; if you reach ~8–9 minutes, stop iterating immediately and keep your best valid `/app/design.json`.
-- **Save early, update often**: Write a valid, connected `/app/design.json` within your first 2–3 steps, and overwrite `/app/design.json` immediately whenever you find an improved valid design.
-- **Keep scripts fast (`< 5s`)**: Each `FEASolver.solve()` takes ~15ms, so keep any Python search/optimization script under **150–200 evaluations** (use `model.to_density_grid(subgrid=1)` during fast inner loops, then verify once with `inspect_design()`). Avoid long `scipy.optimize` sweeps or writing many successive refinement scripts.
-- **Stop once satisfied**: Once you hit the target volume fraction, stress limit, wall-thickness check, and strong stiffness, save `/app/design.json` and finish.
+### Workflow Tips
+- **Use physics-guided cuts**: Inspect `cad-sim status --ascii` to see high-stress load paths (`9`/`#`), low-strain pockets (`1`/`2`), and `Low-Strain Zones`, then place/adjust cutouts intentionally.
+- **Batch multiple cuts in one shell command when helpful**: You can chain planned cuts (e.g., `cad-sim cut-polygon ... && cad-sim cut-circle ... && cad-sim status --ascii`) to reduce round-trips.
+- **Stop once satisfied**: Once `/app/design.json` meets the target volume fraction, stress limit, connectivity, and wall-thickness checks with strong stiffness, finish.
 
 ---
 
@@ -239,8 +222,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     ca-certificates \\
     curl \\
     git \\
-    nodejs \\
-    npm \\
     procps \\
     && rm -rf /var/lib/apt/lists/*
 
@@ -434,6 +415,11 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Model slug for opencode, e.g. gemini/gemini-2.5-pro",
     )
+    p_run.add_argument(
+        "--sequential",
+        action="store_true",
+        help="Run tasks one by one instead of concurrently when --task all is used.",
+    )
 
     args = parser.parse_args(argv)
     cmd = args.cmd or "sync"
@@ -504,13 +490,12 @@ def main(argv: list[str] | None = None) -> int:
             agent_env_flags.extend(["--ae", f"OPENAI_API_KEY={openai_key}"])
             display_env_flags.extend(["--ae", "OPENAI_API_KEY=***"])
 
-    target_ids = (
-        list(HARBOR_TASK_BUILDERS.keys()) if args.task == "all" else [args.task]
-    )
-    for tid in target_ids:
+    local_harbor = Path(sys.executable).parent / "harbor"
+    harbor_bin = [str(local_harbor)] if local_harbor.exists() else ["uvx", "harbor"]
+
+    def _run_one(tid: str) -> int:
         base_cmd = [
-            "uvx",
-            "harbor",
+            *harbor_bin,
             "run",
             "-p",
             str(TASKS_DIR / tid),
@@ -521,9 +506,20 @@ def main(argv: list[str] | None = None) -> int:
             base_cmd.extend(["-m", args.model])
         harbor_cmd = [*base_cmd, *agent_env_flags]
         print("Running:", " ".join([*base_cmd, *display_env_flags]))
-        res = subprocess.run(harbor_cmd, cwd=REPO_ROOT)
-        if res.returncode != 0:
-            return res.returncode
+        return subprocess.run(harbor_cmd, cwd=REPO_ROOT).returncode
+
+    target_ids = (
+        list(HARBOR_TASK_BUILDERS.keys()) if args.task == "all" else [args.task]
+    )
+    if len(target_ids) > 1 and not args.sequential:
+        with ThreadPoolExecutor(max_workers=len(target_ids)) as pool:
+            codes = list(pool.map(_run_one, target_ids))
+        return next((c for c in codes if c != 0), 0)
+
+    for tid in target_ids:
+        code = _run_one(tid)
+        if code != 0:
+            return code
     return 0
 
 

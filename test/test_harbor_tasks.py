@@ -8,7 +8,6 @@ from src.agents.cad_cli import main as cad_cli_main
 from src.agents.csg import CADModel
 from src.agents.fea import FEASolver
 from src.agents.harbor_sync import REPO_ROOT, sync_harbor_tasks
-from src.agents.heuristic_agent import HeuristicCADDesigner
 from src.agents.oracle_solver import ParametricCADOptimizer
 from src.agents.problem import (
     HARBOR_TASK_BUILDERS,
@@ -125,16 +124,16 @@ class TestHarborVerifierAndTasks(unittest.TestCase):
                         self.assertLessEqual((len(act.params) - 1) // 2, 8)
                 self.assertLessEqual(res.reward, 1.0)
 
-            # Heuristic baseline gets smooth partial credit in (0, oracle)
+            # Partial-credit design gets smooth reward in (0, oracle)
             p_cant = make_harbor_cantilever()
-            heur_model = HeuristicCADDesigner(p_cant).design(
-                max_steps=16, cut_radius=8.0
-            )
-            h_path = Path(tmp) / "heur.json"
-            heur_model.save_json(h_path)
-            r_heur = score_cad_submission(p_cant, h_path, simp_iterations=25)
-            self.assertGreater(r_heur.reward, 0.15)
-            self.assertLess(r_heur.reward, 0.92)
+            partial_model = ParametricCADOptimizer(p_cant).optimize()
+            partial_model.undo()
+            partial_model.undo()
+            h_path = Path(tmp) / "partial.json"
+            partial_model.save_json(h_path)
+            r_partial = score_cad_submission(p_cant, h_path, simp_iterations=25)
+            self.assertGreater(r_partial.reward, 0.15)
+            self.assertLess(r_partial.reward, 0.92)
 
     def test_synced_harbor_layout_and_sandbox_isolation(self) -> None:
         task_dirs = sync_harbor_tasks()
