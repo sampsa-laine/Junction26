@@ -114,6 +114,18 @@ def _clamp_load_case_index(
     return None
 
 
+def _solution_display_rank(sol: SolutionRecord) -> int:
+    if sol.source_kind == "harbor_run":
+        return 0
+    if sol.source_kind == "in_repo_solver" and sol.solver_name == "oracle_solver":
+        return 1
+    if sol.source_kind == "in_repo_solver" and sol.solver_name == "simp":
+        return 2
+    if sol.source_kind == "human":
+        return 4
+    return 3
+
+
 def _preferred_replay_solution_id(
     solutions: Sequence[SolutionRecord], fallback_id: str | None = None
 ) -> str | None:
@@ -427,22 +439,31 @@ def main() -> None:
         )
 
         if only_current:
-            displayed_solutions: list[SolutionRecord] = [
-                sol
-                for sol in loaded_solutions.values()
-                if _problem_signature(sol.problem) == prob_sig
-            ]
+            displayed_solutions: list[SolutionRecord] = sorted(
+                (
+                    sol
+                    for sol in loaded_solutions.values()
+                    if _problem_signature(sol.problem) == prob_sig
+                ),
+                key=_solution_display_rank,
+            )
         else:
-            current_problem_solutions = [
-                sol
-                for sol in loaded_solutions.values()
-                if _problem_signature(sol.problem) == prob_sig
-            ]
-            other_problem_solutions = [
-                sol
-                for sol in loaded_solutions.values()
-                if _problem_signature(sol.problem) != prob_sig
-            ]
+            current_problem_solutions = sorted(
+                (
+                    sol
+                    for sol in loaded_solutions.values()
+                    if _problem_signature(sol.problem) == prob_sig
+                ),
+                key=_solution_display_rank,
+            )
+            other_problem_solutions = sorted(
+                (
+                    sol
+                    for sol in loaded_solutions.values()
+                    if _problem_signature(sol.problem) != prob_sig
+                ),
+                key=_solution_display_rank,
+            )
             displayed_solutions = [
                 *current_problem_solutions,
                 *other_problem_solutions,
@@ -595,7 +616,7 @@ def main() -> None:
             st.session_state.pop("_replay_slider_max", None)
             st.info(
                 "Continuous SIMP density solutions do not contain parametric CSG `CutoutAction` history. "
-                "Select a parametric `CADModel` solution (Harbor agent solution, Oracle Solver, "
+                "Select a parametric `CADModel` solution (AI Agent, Reference Solution, "
                 "or Human Designer) to step through cutouts `0..N`."
             )
         else:

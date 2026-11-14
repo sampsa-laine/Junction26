@@ -959,8 +959,8 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(
             try1_headings,
             [
+                "#### Reference Solution (`Cantilever Lightweight Bracket`)",
                 "#### SIMP Topology Optimum (Continuous) (`Cantilever Lightweight Bracket`)",
-                "#### Oracle Solver (SIMP-to-CAD) (`Cantilever Lightweight Bracket`)",
             ],
         )
         try1_replay_id = at.selectbox(key="replay_solution_selector").value
@@ -990,8 +990,8 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(
             try2_headings,
             [
+                "#### Reference Solution (`Stress-Constrained L-Bracket`)",
                 "#### SIMP Topology Optimum (Continuous) (`Stress-Constrained L-Bracket`)",
-                "#### Oracle Solver (SIMP-to-CAD) (`Stress-Constrained L-Bracket`)",
             ],
         )
         try2_replay_id = at.selectbox(key="replay_solution_selector").value
