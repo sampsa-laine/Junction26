@@ -364,23 +364,23 @@ def _field_range(
     return 0.0, 1.0
 
 
-def compute_replay_field_ranges(
-    frames: Sequence[ReplayFrame],
+def compute_shared_field_ranges(
+    items: Sequence[SolutionRecord | ReplayFrame],
     log_strain: bool = False,
 ) -> tuple[tuple[float, float], tuple[float, float]]:
-    """Computes shared (vmin, vmax) across all replay frames for stress and strain energy."""
-    if not frames:
+    """Computes shared (vmin, vmax) across solutions or replay frames for stress and strain energy."""
+    if not items:
         return (0.0, 1.0), (1e-6 if log_strain else 0.0, 1.0)
 
     stress_ranges = [
-        _field_range(f.fea_result.von_mises_stress, f.density, log_scale=False)
-        for f in frames
+        _field_range(item.fea_result.von_mises_stress, item.density, log_scale=False)
+        for item in items
     ]
     strain_ranges = [
         _field_range(
-            f.fea_result.element_strain_energies, f.density, log_scale=log_strain
+            item.fea_result.element_strain_energies, item.density, log_scale=log_strain
         )
-        for f in frames
+        for item in items
     ]
     stress_min = min(r[0] for r in stress_ranges)
     stress_max = max(r[1] for r in stress_ranges)
@@ -397,6 +397,14 @@ def compute_replay_field_ranges(
         strain_max = strain_min + 1.0
 
     return (stress_min, stress_max), (strain_min, strain_max)
+
+
+def compute_replay_field_ranges(
+    frames: Sequence[ReplayFrame],
+    log_strain: bool = False,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Computes shared (vmin, vmax) across all replay frames for stress and strain energy."""
+    return compute_shared_field_ranges(frames, log_strain=log_strain)
 
 
 def render_fea_field_figure(

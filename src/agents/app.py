@@ -31,6 +31,7 @@ from src.agents.solutions import (
 from src.agents.visualizer import (
     compute_load_case_fea,
     compute_replay_field_ranges,
+    compute_shared_field_ranges,
     render_fea_field_figure,
     render_model_geometry_figure,
     render_replay_trajectory_figure,
@@ -567,7 +568,19 @@ def main() -> None:
                     "- **Manufacturability**: `1.0` when wall thickness and boundary smoothness "
                     "checks pass, otherwise penalized for thin slivers or jagged edges."
                 )
+            solutions_by_problem: dict[str, list[SolutionRecord]] = {}
             for sol in displayed_solutions:
+                solutions_by_problem.setdefault(
+                    _problem_signature(sol.problem), []
+                ).append(sol)
+            problem_ranges = {
+                psig: compute_shared_field_ranges(group, log_strain=log_strain)
+                for psig, group in solutions_by_problem.items()
+            }
+
+            for sol in displayed_solutions:
+                sol_psig = _problem_signature(sol.problem)
+                comp_stress_range, comp_strain_range = problem_ranges[sol_psig]
                 with st.container():
                     st.markdown(f"#### {sol.label} (`{sol.problem.name}`)")
                     ver = sol.verification
@@ -603,14 +616,18 @@ def main() -> None:
                         load_case_index=selected_load_case,
                         log_strain=log_strain,
                         highlight_cutout=False,
+                        stress_range=comp_stress_range,
+                        strain_range=comp_strain_range,
                         cache_key=(
                             "compare",
                             sol.solution_id,
-                            _problem_signature(sol.problem),
+                            sol_psig,
                             _history_signature(sol.cad_model),
                             _clamp_load_case_index(sol.problem, selected_load_case),
                             log_strain,
                             False,
+                            comp_stress_range,
+                            comp_strain_range,
                         ),
                     )
                     st.divider()
