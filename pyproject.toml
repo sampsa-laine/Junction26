@@ -16,7 +16,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "harbor>=0.26.0",
     "matplotlib>=3.11.2",
+    "modal>=1.6.4",
     "numpy>=2.5.4",
     "scipy>=1.18.1",
     "shapely>=2.2.0",
@@ -28,7 +30,6 @@ junction26 = "src.agents.main:main"
 arena = "src.agents.main:run_app"
 cad-sim = "src.agents.cad_cli:main"
 harbor-tasks = "src.agents.harbor_sync:main"
-
 
 [dependency-groups]
 dev = [
