@@ -16,16 +16,16 @@ Starting from the stock plate in `/app/problem.json`, apply Constructive Solid G
 - **Keep-Out Regions** (`SOLID` bosses cannot be cut; `VOID` zones are pre-cut):
   - `SOLID` rect: params `(0.0, 0.0, 2.5, 30.0)`
   - `SOLID` circle: params `(57.0, 4.0, 3.0)`
+- **Uncut Stock Baseline**: `volume_fraction = 1.0000`, `total_compliance = 32.99` (`case_compliances = [32.99]`), `max_von_mises_stress = 0.5796`
 
 ### Engineering Note
 Primary bending tension/compression chords run along the top and bottom edges from the fixed left wall (x=0) down to the tip load boss at (57, 4), while the upper-right exterior corner and central web shear pockets carry minimal strain energy.
 
 ---
 
-## Interactive Workbench Tools
+## Interactive Workbench Tool (`cad-sim`)
 
-### 1. Command-Line Tool (`cad-sim`)
-Run `cad-sim` from anywhere to inspect the problem, apply CSG cutouts to `/app/design.json`, and run `<15ms` Q4 Finite Element Analysis (FEA):
+**Use only `cad-sim` CLI commands** to inspect the problem, apply CSG cutouts to `/app/design.json`, and evaluate FEA feedback (`<15ms` per call). **Do not write or run Python optimization/search scripts or import `cad_env` directly.**
 
 ```bash
 # Inspect full specification & boundary conditions
@@ -48,34 +48,10 @@ cad-sim reset
 cad-sim export --svg /app/design.svg --dxf /app/design.dxf
 ```
 
-### 2. Python Simulation API (`cad_env`)
-You may also write and execute Python optimization/search scripts directly against the pre-installed `cad_env` package (`/opt/cad_env`):
-
-```python
-from cad_env import CADModel, DesignProblem, FEASolver, inspect_design
-
-problem = DesignProblem.load_json("/app/problem.json")
-solver = FEASolver(problem)
-model = CADModel(problem)
-
-model.cut_polygon([(25.0, 28.0), (56.0, 28.0), (56.0, 14.0)], fillet_radius=1.8)
-model.cut_circle(22.0, 14.0, radius=4.0)
-
-report = inspect_design(problem, model)
-print(
-    report["volume_fraction"],
-    report["total_compliance"],
-    report["max_von_mises_stress"],
-)
-
-# Always save your final CAD model to /app/design.json
-model.save_json("/app/design.json")
-```
-
-### Time Budget & Fast Workflow Tips
-- **Save early, update often**: Write a valid, connected `/app/design.json` within your first 2–3 steps, and overwrite `/app/design.json` immediately whenever you find an improved valid design.
-- **Keep scripts fast (`< 5s`)**: Each `FEASolver.solve()` takes ~15ms, so keep any Python search/optimization script under **150–200 evaluations** (use `model.to_density_grid(subgrid=1)` during fast inner loops, then verify once with `inspect_design()`). Avoid long `scipy.optimize` sweeps or writing many successive refinement scripts.
-- **Stop once satisfied**: Once you hit the target volume fraction, stress limit, wall-thickness check, and strong stiffness, save `/app/design.json` and finish.
+### Workflow Tips
+- **Use physics-guided cuts**: Inspect `cad-sim status --ascii` to see high-stress load paths (`9`/`#`), low-strain pockets (`1`/`2`), and `Low-Strain Zones`, then place/adjust cutouts intentionally.
+- **Batch multiple cuts in one shell command when helpful**: You can chain planned cuts (e.g., `cad-sim cut-polygon ... && cad-sim cut-circle ... && cad-sim status --ascii`) to reduce round-trips.
+- **Stop once satisfied**: Once `/app/design.json` meets the target volume fraction, stress limit, connectivity, and wall-thickness checks with strong stiffness, finish.
 
 ---
 
