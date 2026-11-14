@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from streamlit.testing.v1 import AppTest
 
+from src.agents.cad_canvas import apply_canvas_action, build_canvas_payload
 from src.agents.csg import CADModel
 from src.agents.fea import FEAResult, FEASolver
 from src.agents.problem import (
@@ -790,12 +791,18 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             ["Human Designer (0 cutouts)"],
         )
 
+        at.radio(key="human_cut_type").set_value("Circular Hole").run(timeout=30)
         at.button(key="human_cut_circle_btn").click().run(timeout=30)
         self.assertEqual(len(at.exception), 0)
+        self.assertNotIn("human_fea_snapshot", at.session_state)
         self.assertEqual(
             at.selectbox(key="replay_solution_selector").options,
             ["Human Designer (1 cutouts)"],
         )
+
+        at.button(key="human_refresh_fea_btn").click().run(timeout=30)
+        self.assertEqual(len(at.exception), 0)
+        self.assertIn("human_fea_snapshot", at.session_state)
 
         at.radio(key="human_cut_type").set_value("Rectangular Cutout").run(timeout=30)
         self.assertEqual(len(at.exception), 0)
@@ -909,6 +916,7 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             at.run(timeout=30)
             self.assertEqual(len(at.exception), 0)
 
+            at.radio(key="human_cut_type").set_value("Circular Hole").run(timeout=30)
             at.button(key="human_cut_circle_btn").click().run(timeout=30)
             at.radio(key="human_cut_type").set_value("Rectangular Cutout").run(
                 timeout=30
@@ -993,6 +1001,58 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             at.session_state["loaded_solutions"][try2_replay_id].problem.name,
             "Stress-Constrained L-Bracket",
         )
+
+    def test_cad_canvas_payload_and_polygon_cutout(self) -> None:
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        payload = build_canvas_payload(
+            prob,
+            model,
+            tool="polygon",
+            fillet_radius=0.5,
+            slot_radius=2.5,
+            grid_snap=0.5,
+            problem_key="cantilever",
+        )
+        self.assertEqual(payload["tool"], "polygon")
+        self.assertEqual(len(payload["polygons"]), 1)
+        self.assertGreaterEqual(len(payload["supports"]), 1)
+        self.assertGreaterEqual(len(payload["loads"]), 1)
+
+        ok, err = apply_canvas_action(
+            model,
+            {
+                "type": "polygon",
+                "points": [[20.0, 10.0], [32.0, 10.0], [26.0, 20.0]],
+                "fillet_radius": 0.5,
+            },
+        )
+        self.assertTrue(ok)
+        self.assertIsNone(err)
+        self.assertEqual(len(model.history), 1)
+        self.assertEqual(model.history[0].action_type, "polygon")
+
+        updated_payload = build_canvas_payload(
+            prob,
+            model,
+            tool="circle",
+            fillet_radius=0.0,
+            slot_radius=2.5,
+            grid_snap=0.5,
+            problem_key="cantilever",
+        )
+        self.assertEqual(len(updated_payload["polygons"][0]["holes"]), 1)
+
+        bad_ok, bad_err = apply_canvas_action(
+            model,
+            {
+                "type": "polygon",
+                "points": [[1.0, 1.0], [2.0, 2.0]],
+                "fillet_radius": 0.0,
+            },
+        )
+        self.assertFalse(bad_ok)
+        self.assertIsNotNone(bad_err)
 
 
 if __name__ == "__main__":
