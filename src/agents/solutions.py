@@ -10,22 +10,17 @@ import numpy as np
 
 from .csg import CADModel, CutoutAction
 from .fea import FEAResult, FEASolver
-from .llm_designer import LLMCADDesigner
 from .metrics import EvaluationScoreboard, evaluate_design
 from .oracle_solver import ParametricCADOptimizer
 from .problem import (
     HARBOR_TASK_BUILDERS,
     DesignProblem,
-    make_cantilever_beam,
-    make_l_bracket,
-    make_mbb_beam,
-    make_suspension_arm,
 )
 from .simp import SIMPOptimizer, SIMPResult
 from .verifier import VerificationResult
 
 SourceKind = Literal["harbor_run", "in_repo_solver", "design_file", "human"]
-InRepoSolverName = Literal["simp", "oracle_solver", "llm_designer"]
+InRepoSolverName = Literal["simp", "oracle_solver"]
 
 
 @dataclass(frozen=True)
@@ -66,34 +61,6 @@ PROBLEM_PRESETS: dict[str, ProblemPreset] = {
         task_id="aerospace-rib-obstacles",
         builder=HARBOR_TASK_BUILDERS["aerospace-rib-obstacles"],
     ),
-    "cantilever": ProblemPreset(
-        key="cantilever",
-        display_name="Arena: Cantilever Beam",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_cantilever_beam,
-    ),
-    "mbb": ProblemPreset(
-        key="mbb",
-        display_name="Arena: MBB Beam",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_mbb_beam,
-    ),
-    "l_bracket": ProblemPreset(
-        key="l_bracket",
-        display_name="Arena: L-Bracket",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_l_bracket,
-    ),
-    "suspension": ProblemPreset(
-        key="suspension",
-        display_name="Arena: Suspension Arm",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_suspension_arm,
-    ),
 }
 
 _PROBLEM_NAME_TO_PRESET_KEY: dict[str, str] = {
@@ -105,14 +72,6 @@ _PROBLEM_NAME_TO_PRESET_KEY: dict[str, str] = {
     "suspension-rocker-multiload": "suspension-rocker-multiload",
     "aerospace rib with obstacle tunnels": "aerospace-rib-obstacles",
     "aerospace-rib-obstacles": "aerospace-rib-obstacles",
-    "cantilever beam": "cantilever",
-    "cantilever": "cantilever",
-    "mbb beam": "mbb",
-    "mbb": "mbb",
-    "l-bracket": "l_bracket",
-    "l_bracket": "l_bracket",
-    "suspension arm": "suspension",
-    "suspension": "suspension",
 }
 
 _SIMP_CACHE: dict[tuple[str, int], SIMPResult] = {}
@@ -1036,16 +995,10 @@ def run_in_repo_solver(
         cad_model = ParametricCADOptimizer(problem).optimize()
         label = "Oracle Solver (SIMP-to-CAD)"
         canonical_solver = "oracle_solver"
-    elif normalized == "llm_designer":
-        llm_res = LLMCADDesigner(problem).design(**kwargs)
-        cad_model = llm_res.cad_model
-        label = "LLM ReAct Designer"
-        canonical_solver = "llm_designer"
-        extra_metadata["transcript"] = llm_res.transcript
     else:
         raise ValueError(
             f"Unsupported solver_name {solver_name!r}; expected one of "
-            "'simp', 'oracle_solver', 'llm_designer'."
+            "'simp', 'oracle_solver'."
         )
 
     density = cad_model.to_density_grid()
@@ -1117,29 +1070,27 @@ def build_comparison_rows(solutions: Sequence[SolutionRecord]) -> list[dict[str,
             if stress_limit is not None
             else f"{max_vm:.3f}"
         )
-        case_comp_str = ", ".join(f"{c:.2f}" for c in sol.fea_result.case_compliances)
         comp_val = sol.fea_result.compliance
         comp_str = f"{comp_val:.2f}" if math.isfinite(comp_val) else "inf"
 
         rows.append(
             {
                 "Solution": sol.label,
-                "Source": sol.source_kind,
-                "Solver": sol.solver_name,
                 "Problem": sol.problem.name,
                 "Harbor Reward": (
                     f"{sol.harbor_reward:.4f}"
                     if sol.harbor_reward is not None
-                    else "N/A (Non-CAD)"
+                    else "N/A"
                 ),
-                "Arena Score": f"{sol.scoreboard.overall_score:.1f}",
+                "Stiffness": f"{ver.stiffness_factor:.4f}"
+                if ver is not None
+                else "N/A",
+                "Weight": f"{ver.volume_factor:.4f}" if ver is not None else "N/A",
+                "Stress": f"{ver.stress_factor:.4f}" if ver is not None else "N/A",
+                "Manufacturability": (
+                    f"{ver.manufacturability_factor:.4f}" if ver is not None else "N/A"
+                ),
                 "Compliance": comp_str,
-                "Case Compliances": case_comp_str,
-                "SIMP Gap %": (
-                    "0.0%"
-                    if sol.solver_name == "simp"
-                    else f"+{sol.scoreboard.optimality_gap_percent:.1f}%"
-                ),
                 "Volume / Target": (
                     f"{sol.scoreboard.volume_fraction:.3f} / "
                     f"{sol.problem.target_volume_fraction:.2f}"
