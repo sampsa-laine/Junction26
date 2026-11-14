@@ -985,6 +985,81 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         finally:
             st_logger.removeHandler(handler)
 
+    def test_problem_geometry_updates_across_successive_tries(self) -> None:
+        app_path = Path(__file__).resolve().parents[1] / "src" / "agents" / "app.py"
+        at = AppTest.from_file(app_path)
+        at.run(timeout=30)
+        self.assertEqual(len(at.exception), 0)
+        self.assertTrue(
+            any("Cantilever Lightweight Bracket" in s.value for s in at.subheader)
+        )
+
+        # Try 1: run heuristic_agent on default cantilever-lightweight
+        at.sidebar.multiselect(key="selected_solvers").set_value(
+            ["heuristic_agent"]
+        ).run(timeout=30)
+        at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
+        self.assertEqual(len(at.exception), 0)
+        try1_headings = [m.value for m in at.markdown if m.value.startswith("#### ")]
+        self.assertEqual(
+            try1_headings,
+            ["#### Heuristic CAD Agent (`Cantilever Lightweight Bracket`)"],
+        )
+        try1_replay_id = at.selectbox(key="replay_solution_selector").value
+        self.assertTrue(str(try1_replay_id).startswith("solver:heuristic_agent:"))
+
+        # Switch Design Problem to l-bracket-stress before running solvers:
+        # Comparison & Replay must immediately switch away from Cantilever
+        at.sidebar.selectbox(key="preset_key").set_value("l-bracket-stress").run(
+            timeout=30
+        )
+        self.assertEqual(len(at.exception), 0)
+        switched_headings = [
+            m.value for m in at.markdown if m.value.startswith("#### ")
+        ]
+        self.assertEqual(switched_headings, [])
+        self.assertTrue(
+            any("Stress-Constrained L-Bracket" in s.value for s in at.subheader)
+        )
+        switched_replay_id = at.selectbox(key="replay_solution_selector").value
+        self.assertNotEqual(switched_replay_id, try1_replay_id)
+        self.assertTrue(str(switched_replay_id).startswith("human:"))
+
+        # Try 2: run heuristic_agent on l-bracket-stress
+        at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
+        self.assertEqual(len(at.exception), 0)
+        try2_headings = [m.value for m in at.markdown if m.value.startswith("#### ")]
+        self.assertEqual(
+            try2_headings,
+            ["#### Heuristic CAD Agent (`Stress-Constrained L-Bracket`)"],
+        )
+        try2_replay_id = at.selectbox(key="replay_solution_selector").value
+        self.assertNotEqual(try2_replay_id, try1_replay_id)
+        self.assertTrue(str(try2_replay_id).startswith("solver:heuristic_agent:"))
+        self.assertEqual(
+            at.session_state["loaded_solutions"][try2_replay_id].problem.name,
+            "Stress-Constrained L-Bracket",
+        )
+        self.assertIn(
+            "Stress-Constrained L-Bracket",
+            str(at.selectbox(key="export_model_selector").value),
+        )
+
+        # Try 3: override target volume fraction on the same preset and re-run
+        at.sidebar.checkbox(key="override_target_volume").check().run(timeout=30)
+        at.sidebar.slider(key="custom_target_volume").set_value(0.28).run(timeout=30)
+        at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
+        self.assertEqual(len(at.exception), 0)
+        try3_replay_id = at.selectbox(key="replay_solution_selector").value
+        self.assertNotEqual(try3_replay_id, try2_replay_id)
+        self.assertAlmostEqual(
+            at.session_state["loaded_solutions"][
+                try3_replay_id
+            ].problem.target_volume_fraction,
+            0.28,
+            places=5,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,8 +25,8 @@ Frontend and CLI environment for evaluating, comparing, and replaying 2D structu
 
 | View | Features |
 | :--- | :--- |
-| **Solution Comparison & Inspection** | Unified Harbor reward (`[0, 1]`) & Arena score (`[0, 100]`) table; side-by-side **Resulting Model**, **Von Mises Stress**, and **Element Strain Energy** plots (`penalty=1.0`); multi-load envelope vs per-case selector |
-| **Cutout History Replay (`0..N`)** | Reconstructs saved `CADModel` history from uncut stock (`step 0`) to final design (`step N`), highlighting active cutouts (`circle`, `rect`, `slot`, `polygon`, fillets, mirrors) with step FEA fields and `0..N` metric trajectories |
+| **Solution Comparison & Inspection** | Live stock problem preview; unified Harbor reward (`[0, 1]`) & Arena score (`[0, 100]`) table filtered to the active problem by default; side-by-side **Resulting Model**, **Von Mises Stress**, and **Element Strain Energy** plots (`penalty=1.0`); multi-load envelope vs per-case selector |
+| **Cutout History Replay (`0..N`)** | Automatically syncs to the active problem or latest solver/trial run; reconstructs saved `CADModel` history from uncut stock (`step 0`) to final design (`step N`), highlighting active cutouts (`circle`, `rect`, `slot`, `polygon`, fillets, mirrors) with step FEA fields and `0..N` metric trajectories |
 | **Human Canvas & LLM Log** | Manual `circle` / `rect` / `slot` cutouts with live FEA plots and LLM ReAct step transcripts |
 | **CAD Export** | Downloads any loaded or replayed `CADModel` as SVG, AutoCAD R12 DXF, or `design.json` |
 

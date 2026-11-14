@@ -1,3 +1,5 @@
+from collections.abc import Sequence
+import hashlib
 import json
 from pathlib import Path
 
@@ -11,6 +13,7 @@ from src.agents.solutions import (
     PROBLEM_PRESETS,
     InRepoSolverName,
     SolutionRecord,
+    _problem_short_id,
     build_comparison_rows,
     build_human_solution,
     discover_harbor_runs,
@@ -22,6 +25,9 @@ from src.agents.solutions import (
     run_in_repo_solver,
 )
 from src.agents.visualizer import (
+    compute_load_case_fea,
+    render_fea_field_figure,
+    render_model_geometry_figure,
     render_replay_trajectory_figure,
     render_solution_views,
 )
@@ -32,6 +38,22 @@ _SOLVER_LABELS: dict[InRepoSolverName, str] = {
     "heuristic_agent": "Heuristic Agent (Low-Strain Cuts)",
     "llm_designer": "LLM Designer (ReAct Agent)",
 }
+
+_HUMAN_SLIDER_KEYS = (
+    "human_cx",
+    "human_cy",
+    "human_cr",
+    "human_rx",
+    "human_ry",
+    "human_rw",
+    "human_rh",
+    "human_rf",
+    "human_sx1",
+    "human_sy1",
+    "human_sx2",
+    "human_sy2",
+    "human_sr",
+)
 
 
 def _problem_signature(problem: DesignProblem) -> str:
@@ -46,6 +68,85 @@ def _clamp_load_case_index(
     if 0 <= requested_index < len(problem.effective_load_cases):
         return requested_index
     return None
+
+
+def _preferred_replay_solution_id(
+    solutions: Sequence[SolutionRecord], fallback_id: str | None = None
+) -> str | None:
+    for sol in solutions:
+        if sol.cad_model is not None and len(sol.cad_model.history) > 0:
+            return sol.solution_id
+    for sol in solutions:
+        if sol.cad_model is not None:
+            return sol.solution_id
+    if solutions:
+        return solutions[0].solution_id
+    return fallback_id
+
+
+def _set_active_replay_selection(solution_id: str | None) -> None:
+    if solution_id is None:
+        return
+    if st.session_state.get("replay_solution_selector") != solution_id:
+        st.session_state["replay_solution_selector"] = solution_id
+        st.session_state.pop("active_replay_model", None)
+        st.session_state.pop("active_replay_label", None)
+        st.session_state.pop("replay_step_slider", None)
+        st.session_state.pop("_replay_slider_sol_id", None)
+        st.session_state.pop("_replay_slider_max", None)
+
+
+def _render_stock_problem_preview(
+    problem: DesignProblem,
+    load_case_index: int | None,
+    log_strain: bool,
+) -> None:
+    stock_model = CADModel(problem)
+    stock_density = stock_model.to_density_grid()
+    effective_case = _clamp_load_case_index(problem, load_case_index)
+    stock_fea = compute_load_case_fea(
+        problem, stock_density, load_case_index=effective_case, penalty=1.0
+    )
+    case_tag = (
+        f" [Case {effective_case + 1}]"
+        if effective_case is not None
+        else (" [All Cases]" if len(problem.effective_load_cases) > 1 else "")
+    )
+    col_model, col_stress, col_strain = st.columns(3)
+    with col_model:
+        st.pyplot(
+            render_model_geometry_figure(
+                problem=problem,
+                cad_model=stock_model,
+                density=stock_density,
+                load_case_index=effective_case,
+                title=f"{problem.name} — Stock Geometry{case_tag}",
+            )
+        )
+    with col_stress:
+        st.pyplot(
+            render_fea_field_figure(
+                problem=problem,
+                density=stock_density,
+                fea_result=stock_fea,
+                field="stress",
+                cad_model=stock_model,
+                log_scale=False,
+                title=f"Stock Von Mises Stress{case_tag} (Max={float(stock_fea.von_mises_stress.max()):.3f})",
+            )
+        )
+    with col_strain:
+        st.pyplot(
+            render_fea_field_figure(
+                problem=problem,
+                density=stock_density,
+                fea_result=stock_fea,
+                field="strain_energy",
+                cad_model=stock_model,
+                log_scale=log_strain,
+                title=f"Stock Strain Energy{case_tag} (C={stock_fea.compliance:.2f})",
+            )
+        )
 
 
 def _render_three_panel_views(
@@ -84,6 +185,8 @@ def main() -> None:
 
     if "loaded_solutions" not in st.session_state:
         st.session_state["loaded_solutions"] = {}
+    if "_cleared_upload_keys" not in st.session_state:
+        st.session_state["_cleared_upload_keys"] = set()
 
     st.sidebar.header("1. Design Problem")
     preset_keys = list(PROBLEM_PRESETS.keys())
@@ -95,6 +198,11 @@ def main() -> None:
     )
     preset = PROBLEM_PRESETS[selected_preset_key]
     problem = preset.builder()
+
+    prev_preset_key = st.session_state.get("_prev_preset_key")
+    if prev_preset_key is not None and prev_preset_key != selected_preset_key:
+        st.session_state.pop("custom_target_volume", None)
+    st.session_state["_prev_preset_key"] = selected_preset_key
 
     override_vol = st.sidebar.checkbox(
         "Override Target Volume Fraction",
@@ -126,12 +234,28 @@ def main() -> None:
     )
 
     prob_sig = _problem_signature(problem)
-    if (
-        "human_model" not in st.session_state
-        or st.session_state.get("human_problem_sig") != prob_sig
-    ):
+    prev_prob_sig = st.session_state.get("human_problem_sig")
+    problem_changed = prev_prob_sig is not None and prev_prob_sig != prob_sig
+    if "human_model" not in st.session_state or problem_changed:
         st.session_state["human_model"] = CADModel(problem)
         st.session_state["human_problem_sig"] = prob_sig
+        for slider_key in _HUMAN_SLIDER_KEYS:
+            st.session_state.pop(slider_key, None)
+        if problem_changed:
+            st.session_state["filter_compare_current_problem"] = True
+            st.session_state["include_human_compare"] = False
+            matching_loaded = [
+                sol
+                for sol in st.session_state["loaded_solutions"].values()
+                if _problem_signature(sol.problem) == prob_sig
+            ]
+            _set_active_replay_selection(
+                _preferred_replay_solution_id(
+                    matching_loaded,
+                    fallback_id=f"human:{_problem_short_id(problem)}",
+                )
+            )
+            st.session_state.pop("export_model_selector", None)
 
     st.sidebar.header("2. View & FEA Controls")
     max_cases = max(
@@ -178,10 +302,20 @@ def main() -> None:
     if st.sidebar.button(
         "🚀 Run In-Repo Solvers", type="primary", key="run_solvers_btn"
     ):
-        ref_simp = None
+        stale_solver_ids = [
+            sid
+            for sid, sol in st.session_state["loaded_solutions"].items()
+            if sol.source_kind == "in_repo_solver"
+            and _problem_signature(sol.problem) == prob_sig
+        ]
+        for sid in stale_solver_ids:
+            st.session_state["loaded_solutions"].pop(sid, None)
+
+        newly_run_records: list[SolutionRecord] = []
         if "simp" in selected_solvers:
             simp_record = run_in_repo_solver(problem, "simp")
             st.session_state["loaded_solutions"][simp_record.solution_id] = simp_record
+            newly_run_records.append(simp_record)
             ref_simp = get_cached_reference_simp(problem)
         else:
             ref_simp = get_cached_reference_simp(problem)
@@ -191,6 +325,13 @@ def main() -> None:
                 continue
             sol_record = run_in_repo_solver(problem, s_key, reference_simp=ref_simp)
             st.session_state["loaded_solutions"][sol_record.solution_id] = sol_record
+            newly_run_records.append(sol_record)
+
+        if newly_run_records:
+            _set_active_replay_selection(
+                _preferred_replay_solution_id(newly_run_records)
+            )
+            st.session_state.pop("export_model_selector", None)
 
     st.sidebar.header("4. Harbor Runs & Design Files")
     discovered_paths = discover_harbor_runs("jobs")
@@ -221,11 +362,14 @@ def main() -> None:
         format_func=lambda s: f"{Path(s).parent.name}/{Path(s).name}",
         key="selected_harbor_trials",
     )
+    newly_loaded_external: list[SolutionRecord] = []
     if st.sidebar.button("📥 Load Selected Harbor Trials", key="load_harbor_btn"):
         for t_str in selected_trial_strs:
             try:
                 rec = load_harbor_trial(trial_option_map[t_str])
+                st.session_state["loaded_solutions"].pop(rec.solution_id, None)
                 st.session_state["loaded_solutions"][rec.solution_id] = rec
+                newly_loaded_external.append(rec)
             except Exception as exc:
                 st.sidebar.error(f"Failed to load {t_str}: {exc}")
 
@@ -244,24 +388,34 @@ def main() -> None:
                     targets = trials if trials else [c_path]
                     for target_dir in targets:
                         rec = load_harbor_trial(target_dir)
+                        st.session_state["loaded_solutions"].pop(rec.solution_id, None)
                         st.session_state["loaded_solutions"][rec.solution_id] = rec
+                        newly_loaded_external.append(rec)
                 else:
                     try:
                         rec = load_design_solution(c_path)
                     except ValueError:
                         rec = load_design_solution(c_path, problem=problem)
+                    st.session_state["loaded_solutions"].pop(rec.solution_id, None)
                     st.session_state["loaded_solutions"][rec.solution_id] = rec
+                    newly_loaded_external.append(rec)
             except Exception as exc:
                 st.sidebar.error(f"Could not load {cleaned_path}: {exc}")
 
     uploaded_file = st.sidebar.file_uploader(
         "Upload design.json", type=["json"], key="upload_design_json"
     )
+    active_upload_key: str | None = None
     if uploaded_file is not None:
-        upload_key = f"uploaded:{uploaded_file.name}:{uploaded_file.size}"
-        if upload_key not in st.session_state["loaded_solutions"]:
+        raw_bytes = uploaded_file.getvalue()
+        content_digest = hashlib.sha256(raw_bytes).hexdigest()[:12]
+        active_upload_key = f"uploaded:{uploaded_file.name}:{content_digest}"
+        if (
+            active_upload_key not in st.session_state["loaded_solutions"]
+            and active_upload_key not in st.session_state["_cleared_upload_keys"]
+        ):
             try:
-                payload = json.loads(uploaded_file.getvalue().decode("utf-8"))
+                payload = json.loads(raw_bytes.decode("utf-8"))
                 try:
                     rec = load_design_payload_solution(
                         payload, label=f"Uploaded ({uploaded_file.name})"
@@ -272,15 +426,30 @@ def main() -> None:
                         problem=problem,
                         label=f"Uploaded ({uploaded_file.name})",
                     )
-                rec.solution_id = upload_key
-                st.session_state["loaded_solutions"][upload_key] = rec
+                rec.solution_id = active_upload_key
+                st.session_state["loaded_solutions"][active_upload_key] = rec
+                newly_loaded_external.append(rec)
             except Exception as exc:
                 st.sidebar.error(f"Invalid design.json upload: {exc}")
 
+    if newly_loaded_external:
+        if any(
+            _problem_signature(rec.problem) != prob_sig for rec in newly_loaded_external
+        ):
+            st.session_state["filter_compare_current_problem"] = False
+        _set_active_replay_selection(
+            _preferred_replay_solution_id(newly_loaded_external)
+        )
+        st.session_state.pop("export_model_selector", None)
+
     if st.sidebar.button("🗑️ Clear Loaded Solutions", key="clear_solutions_btn"):
+        if active_upload_key is not None:
+            st.session_state["_cleared_upload_keys"].add(active_upload_key)
         st.session_state["loaded_solutions"] = {}
         st.session_state.pop("active_replay_model", None)
         st.session_state.pop("active_replay_label", None)
+        st.session_state.pop("replay_solution_selector", None)
+        st.session_state.pop("export_model_selector", None)
 
     updated_max_cases = max(
         [
@@ -307,9 +476,11 @@ def main() -> None:
     )
 
     with tab_compare:
+        if st.session_state.pop("_enable_human_compare_next_run", False):
+            st.session_state["include_human_compare"] = True
         only_current = st.checkbox(
             "Filter displayed solutions to selected problem",
-            value=False,
+            value=True,
             key="filter_compare_current_problem",
         )
         include_human = st.checkbox(
@@ -318,11 +489,27 @@ def main() -> None:
             key="include_human_compare",
         )
 
-        displayed_solutions: list[SolutionRecord] = [
-            sol
-            for sol in loaded_solutions.values()
-            if not only_current or sol.problem.name == problem.name
-        ]
+        if only_current:
+            displayed_solutions: list[SolutionRecord] = [
+                sol
+                for sol in loaded_solutions.values()
+                if _problem_signature(sol.problem) == prob_sig
+            ]
+        else:
+            current_problem_solutions = [
+                sol
+                for sol in loaded_solutions.values()
+                if _problem_signature(sol.problem) == prob_sig
+            ]
+            other_problem_solutions = [
+                sol
+                for sol in loaded_solutions.values()
+                if _problem_signature(sol.problem) != prob_sig
+            ]
+            displayed_solutions = [
+                *current_problem_solutions,
+                *other_problem_solutions,
+            ]
         if include_human:
             displayed_solutions.append(build_human_solution(problem, human_model))
 
@@ -367,6 +554,12 @@ def main() -> None:
                     )
                     st.divider()
         else:
+            st.subheader(f"📐 Selected Problem Geometry (`{problem.name}`)")
+            _render_stock_problem_preview(
+                problem=problem,
+                load_case_index=selected_load_case,
+                log_strain=log_strain,
+            )
             st.info(
                 "Use the sidebar to run in-repo solvers (`SIMP`, `Oracle`, `Heuristic`, `LLM`) "
                 "or load Harbor benchmark trials (`jobs/`) and `design.json` artifacts."
@@ -375,23 +568,39 @@ def main() -> None:
     with tab_replay:
         st.subheader("⏪ Step-by-Step Saved Cutout History Replay (0..N)")
         replay_candidates: dict[str, SolutionRecord] = dict(loaded_solutions)
-        if not replay_candidates or len(human_model.history) > 0:
+        has_current_problem_solution = any(
+            _problem_signature(sol.problem) == prob_sig
+            for sol in loaded_solutions.values()
+        )
+        if not has_current_problem_solution or len(human_model.history) > 0:
             human_sol = build_human_solution(problem, human_model)
             replay_candidates[human_sol.solution_id] = human_sol
 
         candidate_ids = list(replay_candidates.keys())
-        default_idx = 0
-        for idx, cid in enumerate(candidate_ids):
-            cand = replay_candidates[cid]
-            if cand.cad_model is not None and len(cand.cad_model.history) > 0:
-                default_idx = idx
-                break
+        matching_candidates = [
+            replay_candidates[cid]
+            for cid in candidate_ids
+            if _problem_signature(replay_candidates[cid].problem) == prob_sig
+        ]
+        preferred_id = _preferred_replay_solution_id(
+            matching_candidates
+        ) or _preferred_replay_solution_id(list(replay_candidates.values()))
+        default_idx = (
+            candidate_ids.index(preferred_id) if preferred_id in candidate_ids else 0
+        )
+
+        distinct_replay_problems = {
+            rec.problem.name for rec in replay_candidates.values()
+        }
+        replay_label_counts: dict[str, int] = {}
+        for rec in replay_candidates.values():
+            replay_label_counts[rec.label] = replay_label_counts.get(rec.label, 0) + 1
 
         replay_option_labels = {
             cid: (
-                f"{rec.label} ({len(rec.cad_model.history)} cutouts)"
-                if rec.cad_model is not None
-                else f"{rec.label} (Continuous Density)"
+                f"{rec.label}"
+                f"{f' [{rec.problem.name}]' if len(distinct_replay_problems) > 1 or replay_label_counts[rec.label] > 1 else ''}"
+                f" ({f'{len(rec.cad_model.history)} cutouts' if rec.cad_model is not None else 'Continuous Density'})"
             )
             for cid, rec in replay_candidates.items()
         }
@@ -573,6 +782,7 @@ def main() -> None:
                 )
                 if st.button("➕ Cut Circle", key="human_cut_circle_btn"):
                     if human_model.cut_circle(hx, hy, hr):
+                        st.session_state["_enable_human_compare_next_run"] = True
                         st.rerun()
                     else:
                         st.warning(
@@ -594,6 +804,7 @@ def main() -> None:
                 rfillet = st.slider("Corner Fillet", 0.0, 4.0, 1.0, key="human_rf")
                 if st.button("➕ Cut Rectangle", key="human_cut_rect_btn"):
                     if human_model.cut_rect(rx, ry, rw, rh, fillet_radius=rfillet):
+                        st.session_state["_enable_human_compare_next_run"] = True
                         st.rerun()
                     else:
                         st.warning(
@@ -621,6 +832,7 @@ def main() -> None:
                 )
                 if st.button("➕ Cut Slot", key="human_cut_slot_btn"):
                     if human_model.cut_slot(sx1, sy1, sx2, sy2, sr):
+                        st.session_state["_enable_human_compare_next_run"] = True
                         st.rerun()
                     else:
                         st.warning(
@@ -657,7 +869,9 @@ def main() -> None:
         llm_records = [
             sol
             for sol in loaded_solutions.values()
-            if sol.solver_name == "llm_designer" and sol.metadata.get("transcript")
+            if sol.solver_name == "llm_designer"
+            and sol.metadata.get("transcript")
+            and _problem_signature(sol.problem) == prob_sig
         ]
         if llm_records:
             latest_llm = llm_records[-1]
@@ -708,15 +922,29 @@ def main() -> None:
             ]
         exportable_models["Human Designer Canvas"] = human_model
         export_keys = list(exportable_models.keys())
+        default_export_idx = 0
+        for idx, ek in enumerate(export_keys):
+            if (
+                ek != "Human Designer Canvas"
+                and not ek.startswith("Replay: ")
+                and _problem_signature(exportable_models[ek].problem) == prob_sig
+            ):
+                default_export_idx = idx
+                break
+        else:
+            if "Human Designer Canvas" in exportable_models:
+                default_export_idx = export_keys.index("Human Designer Canvas")
+
         if (
             "export_model_selector" in st.session_state
             and st.session_state["export_model_selector"] not in exportable_models
         ):
-            st.session_state["export_model_selector"] = export_keys[0]
+            st.session_state["export_model_selector"] = export_keys[default_export_idx]
 
         chosen_export_label = st.selectbox(
             "Select Parametric CADModel to Export",
             options=export_keys,
+            index=default_export_idx,
             key="export_model_selector",
         )
         export_target = exportable_models[chosen_export_label]
