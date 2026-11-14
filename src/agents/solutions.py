@@ -10,7 +10,6 @@ import numpy as np
 
 from .csg import CADModel, CutoutAction
 from .fea import FEAResult, FEASolver
-from .heuristic_agent import HeuristicCADDesigner
 from .llm_designer import LLMCADDesigner
 from .metrics import EvaluationScoreboard, evaluate_design
 from .oracle_solver import ParametricCADOptimizer
@@ -26,7 +25,7 @@ from .simp import SIMPOptimizer, SIMPResult
 from .verifier import VerificationResult
 
 SourceKind = Literal["harbor_run", "in_repo_solver", "design_file", "human"]
-InRepoSolverName = Literal["simp", "oracle_solver", "heuristic_agent", "llm_designer"]
+InRepoSolverName = Literal["simp", "oracle_solver", "llm_designer"]
 
 
 @dataclass(frozen=True)
@@ -945,10 +944,6 @@ def run_in_repo_solver(
         cad_model = ParametricCADOptimizer(problem).optimize()
         label = "Oracle Solver (SIMP-to-CAD)"
         canonical_solver = "oracle_solver"
-    elif normalized == "heuristic_agent":
-        cad_model = HeuristicCADDesigner(problem).design(**kwargs)
-        label = "Heuristic CAD Agent"
-        canonical_solver = "heuristic_agent"
     elif normalized == "llm_designer":
         llm_res = LLMCADDesigner(problem).design(**kwargs)
         cad_model = llm_res.cad_model
@@ -958,7 +953,7 @@ def run_in_repo_solver(
     else:
         raise ValueError(
             f"Unsupported solver_name {solver_name!r}; expected one of "
-            "'simp', 'oracle_solver', 'heuristic_agent', 'llm_designer'."
+            "'simp', 'oracle_solver', 'llm_designer'."
         )
 
     density = cad_model.to_density_grid()

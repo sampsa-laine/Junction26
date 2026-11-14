@@ -191,7 +191,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
             )
             self.assertAlmostEqual(resolved.target_volume_fraction, 0.31, places=5)
 
-    def test_all_four_in_repo_solvers_and_live_verifier_parity(self) -> None:
+    def test_all_in_repo_solvers_and_live_verifier_parity(self) -> None:
         problem = make_harbor_cantilever()
         ref_simp = get_cached_reference_simp(problem, max_iterations=15)
 
@@ -201,9 +201,6 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
         oracle_rec = run_in_repo_solver(
             problem, "oracle_solver", reference_simp=ref_simp
         )
-        heur_rec = run_in_repo_solver(
-            problem, "heuristic_agent", reference_simp=ref_simp, max_steps=6
-        )
         llm_rec = run_in_repo_solver(
             problem, "llm_designer", reference_simp=ref_simp, max_steps=4
         )
@@ -212,7 +209,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
         self.assertIsNone(simp_rec.verification)
         self.assertEqual(simp_rec.density.shape, (problem.ny, problem.nx))
 
-        for csg_rec in (oracle_rec, heur_rec, llm_rec):
+        for csg_rec in (oracle_rec, llm_rec):
             self.assertIsNotNone(csg_rec.cad_model)
             self.assertIsNotNone(csg_rec.verification)
             self.assertIsNotNone(csg_rec.harbor_reward)
@@ -236,8 +233,8 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
                 loaded_design.verification.reward, official_ver.reward, places=4
             )
 
-        rows = build_comparison_rows([simp_rec, oracle_rec, heur_rec, llm_rec])
-        self.assertEqual(len(rows), 4)
+        rows = build_comparison_rows([simp_rec, oracle_rec, llm_rec])
+        self.assertEqual(len(rows), 3)
         self.assertEqual(rows[0]["Harbor Reward"], "N/A (Non-CAD)")
 
     def test_multi_regime_verifier_parity_and_defensive_loading(self) -> None:
@@ -733,7 +730,7 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertTrue(any("Target Vol: 0.40" in c.value for c in at.sidebar.caption))
 
         at.sidebar.multiselect(key="selected_solvers").set_value(
-            ["simp", "heuristic_agent", "llm_designer"]
+            ["simp", "llm_designer"]
         ).run(timeout=30)
         at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
@@ -955,7 +952,7 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             self.assertEqual(at.slider(key="replay_step_slider").value, 1)
 
             at.sidebar.multiselect(key="selected_solvers").set_value(
-                ["heuristic_agent"]
+                ["llm_designer"]
             ).run(timeout=30)
             at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
             self.assertEqual(len(at.exception), 0)
@@ -964,18 +961,18 @@ class TestStreamlitFrontendApp(unittest.TestCase):
                 timeout=30
             )
             at.sidebar.multiselect(key="selected_solvers").set_value(
-                ["heuristic_agent"]
+                ["llm_designer"]
             ).run(timeout=30)
             at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
             self.assertEqual(len(at.exception), 0)
 
             export_options = at.selectbox(key="export_model_selector").options
             self.assertIn(
-                "Heuristic CAD Agent (Cantilever Lightweight Bracket)",
+                "LLM ReAct Designer (Cantilever Lightweight Bracket)",
                 export_options,
             )
             self.assertIn(
-                "Heuristic CAD Agent (Stress-Constrained L-Bracket)",
+                "LLM ReAct Designer (Stress-Constrained L-Bracket)",
                 export_options,
             )
             self.assertFalse(
@@ -994,19 +991,19 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             any("Cantilever Lightweight Bracket" in s.value for s in at.subheader)
         )
 
-        # Try 1: run heuristic_agent on default cantilever-lightweight
-        at.sidebar.multiselect(key="selected_solvers").set_value(
-            ["heuristic_agent"]
-        ).run(timeout=30)
+        # Try 1: run llm_designer on default cantilever-lightweight
+        at.sidebar.multiselect(key="selected_solvers").set_value(["llm_designer"]).run(
+            timeout=30
+        )
         at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
         try1_headings = [m.value for m in at.markdown if m.value.startswith("#### ")]
         self.assertEqual(
             try1_headings,
-            ["#### Heuristic CAD Agent (`Cantilever Lightweight Bracket`)"],
+            ["#### LLM ReAct Designer (`Cantilever Lightweight Bracket`)"],
         )
         try1_replay_id = at.selectbox(key="replay_solution_selector").value
-        self.assertTrue(str(try1_replay_id).startswith("solver:heuristic_agent:"))
+        self.assertTrue(str(try1_replay_id).startswith("solver:llm_designer:"))
 
         # Switch Design Problem to l-bracket-stress before running solvers:
         # Comparison & Replay must immediately switch away from Cantilever
@@ -1025,17 +1022,17 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertNotEqual(switched_replay_id, try1_replay_id)
         self.assertTrue(str(switched_replay_id).startswith("human:"))
 
-        # Try 2: run heuristic_agent on l-bracket-stress
+        # Try 2: run llm_designer on l-bracket-stress
         at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
         try2_headings = [m.value for m in at.markdown if m.value.startswith("#### ")]
         self.assertEqual(
             try2_headings,
-            ["#### Heuristic CAD Agent (`Stress-Constrained L-Bracket`)"],
+            ["#### LLM ReAct Designer (`Stress-Constrained L-Bracket`)"],
         )
         try2_replay_id = at.selectbox(key="replay_solution_selector").value
         self.assertNotEqual(try2_replay_id, try1_replay_id)
-        self.assertTrue(str(try2_replay_id).startswith("solver:heuristic_agent:"))
+        self.assertTrue(str(try2_replay_id).startswith("solver:llm_designer:"))
         self.assertEqual(
             at.session_state["loaded_solutions"][try2_replay_id].problem.name,
             "Stress-Constrained L-Bracket",

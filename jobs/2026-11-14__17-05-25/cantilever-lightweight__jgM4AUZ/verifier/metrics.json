@@ -1,0 +1,23 @@
+{
+  "reward": 0.7989,
+  "valid": true,
+  "reason": "Valid parametric CAD design evaluated.",
+  "volume_fraction": 0.4493,
+  "target_volume_fraction": 0.45,
+  "stock_volume_fraction": 1.0,
+  "agent_compliance": 81.9442,
+  "simp_reference_compliance": 60.7449,
+  "case_compliances": [
+    81.9442
+  ],
+  "max_von_mises_stress": 0.9668,
+  "max_stress_limit": 1.4,
+  "structurally_connected": true,
+  "wall_thickness_ok": true,
+  "thin_sliver_ratio": 0.0021,
+  "stiffness_factor": 0.7989,
+  "volume_factor": 1.0,
+  "stress_factor": 1.0,
+  "manufacturability_factor": 1.0,
+  "num_actions": 3
+}

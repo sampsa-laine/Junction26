@@ -39,7 +39,6 @@ from src.agents.visualizer import (
 _SOLVER_LABELS: dict[InRepoSolverName, str] = {
     "simp": "SIMP (Continuous Optimum)",
     "oracle_solver": "Oracle Solver (SIMP-to-CAD)",
-    "heuristic_agent": "Heuristic Agent (Low-Strain Cuts)",
     "llm_designer": "LLM Designer (ReAct Agent)",
 }
 
@@ -371,7 +370,6 @@ def main() -> None:
     solver_keys: list[InRepoSolverName] = [
         "simp",
         "oracle_solver",
-        "heuristic_agent",
         "llm_designer",
     ]
     selected_solvers = st.sidebar.multiselect(
