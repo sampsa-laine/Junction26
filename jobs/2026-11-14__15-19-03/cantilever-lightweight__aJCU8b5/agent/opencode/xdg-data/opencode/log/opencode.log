@@ -1,0 +1,25 @@
+timestamp=2026-11-14T13:19:12.792Z level=INFO run=87fa26fe message="creating instance" directory=/app
+timestamp=2026-11-14T13:19:12.793Z level=INFO run=87fa26fe message=fromDirectory directory=/app
+timestamp=2026-11-14T13:19:12.797Z level=INFO run=87fa26fe message=bootstrapping directory=/app
+timestamp=2026-11-14T13:19:12.801Z level=INFO run=87fa26fe message=loading path=/root/.config/opencode/config.json
+timestamp=2026-11-14T13:19:12.801Z level=INFO run=87fa26fe message=loading path=/root/.config/opencode/opencode.json
+timestamp=2026-11-14T13:19:12.804Z level=INFO run=87fa26fe message=loading path=/root/.config/opencode/opencode.jsonc
+timestamp=2026-11-14T13:19:12.870Z level=INFO run=87fa26fe message="all LSPs are disabled"
+timestamp=2026-11-14T13:19:12.870Z level=INFO run=87fa26fe message="all formatters are disabled"
+timestamp=2026-11-14T13:19:12.870Z level=INFO run=87fa26fe message=init
+timestamp=2026-11-14T13:19:13.059Z level=INFO run=87fa26fe message=created id=ses_e25c9b75cffeupRba0vWP9x2dN slug=cosmic-sailor version=1.19.5 projectID=global directory=/app path=app workspaceID=undefined parentID=undefined title="New session - 2026-11-14T13:19:13.059Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794662353059 time.updated=1794662353059
+timestamp=2026-11-14T13:19:13.068Z level=INFO run=87fa26fe message="event connected"
+timestamp=2026-11-14T13:19:13.099Z level=INFO run=87fa26fe message=loop session.id=ses_e25c9b75cffeupRba0vWP9x2dN step=0
+timestamp=2026-11-14T13:19:13.672Z level=INFO run=87fa26fe message=stream providerID=google modelID=gemini-3.8-flash session.id=ses_e25c9b75cffeupRba0vWP9x2dN small=true agent=title mode=primary
+timestamp=2026-11-14T13:19:13.678Z level=INFO run=87fa26fe message="llm runtime selected" llm.runtime=ai-sdk llm.provider=google llm.model=gemini-3.8-flash
+timestamp=2026-11-14T13:19:13.725Z level=INFO run=87fa26fe message=initialized
+timestamp=2026-11-14T13:19:13.756Z level=INFO run=87fa26fe message=tracking hash=c87c8cfc5299ba08231e141ef8f322207e1a3e34 cwd=/app git=/logs/agent/opencode/xdg-data/opencode/snapshot/global/42099b4af021e53fd8fd4e056c2568d7c2e3ffa8
+timestamp=2026-11-14T13:19:13.761Z level=INFO run=87fa26fe message="shell tool using shell" shell=/usr/bin/bash
+timestamp=2026-11-14T13:19:13.767Z level=INFO run=87fa26fe message=init count=1
+timestamp=2026-11-14T13:19:13.816Z level=INFO run=87fa26fe message="watcher backend" directory=/app platform=linux backend=inotify
+timestamp=2026-11-14T13:19:13.823Z level=INFO run=87fa26fe message="project copy refresh started" projectID=global
+timestamp=2026-11-14T13:19:13.824Z level=INFO run=87fa26fe message="project copy refresh done" projectID=global updated=[] removed=[]
+timestamp=2026-11-14T13:19:13.847Z level=INFO run=87fa26fe message="booting location services" directory=/app workspaceID=undefined
+timestamp=2026-11-14T13:19:14.079Z level=INFO run=87fa26fe message=process session.id=ses_e25c9b75cffeupRba0vWP9x2dN messageID=msg_1da364b04001l6UFEIJfsXvZl2
+timestamp=2026-11-14T13:19:14.080Z level=INFO run=87fa26fe message=stream providerID=google modelID=gemini-2.5-pro session.id=ses_e25c9b75cffeupRba0vWP9x2dN small=false agent=build mode=primary
+timestamp=2026-11-14T13:19:14.081Z level=INFO run=87fa26fe message="llm runtime selected" llm.runtime=ai-sdk llm.provider=google llm.model=gemini-2.5-pro

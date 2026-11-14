@@ -1,0 +1,47 @@
+{
+  "problem_name": "Cantilever Lightweight Bracket",
+  "volume_fraction": 0.45005,
+  "actions": [
+    {
+      "action_type": "polygon",
+      "params": [
+        8.7562,
+        30.0,
+        60.0,
+        30.0,
+        60.0,
+        7.0147,
+        2.0
+      ],
+      "description": "Cut 3-gon pocket (fillet=2.0)",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "polygon",
+      "params": [
+        2.4846,
+        25.1893,
+        45.8028,
+        6.0,
+        2.4846,
+        4.6492,
+        3.0
+      ],
+      "description": "Cut 3-gon pocket (fillet=3.0)",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "circle",
+      "params": [
+        42.0058,
+        6.9966,
+        1.5
+      ],
+      "description": "Cut circle at (42.0, 7.0) r=1.5",
+      "mirror_x": false,
+      "mirror_y": false
+    }
+  ]
+}

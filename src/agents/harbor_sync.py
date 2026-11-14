@@ -90,7 +90,7 @@ timeout_sec = 600.0
 
 [environment]
 network_mode = "public"
-build_timeout_sec = 600.0
+build_timeout_sec = 900.0
 os = "linux"
 mcp_servers = []
 
@@ -220,6 +220,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
     ca-certificates \\
     curl \\
     git \\
+    nodejs \\
+    npm \\
     procps \\
     && rm -rf /var/lib/apt/lists/*
 
@@ -229,6 +231,15 @@ RUN uv pip install --system --no-cache \\
     "numpy==2.5.4" \\
     "scipy==1.18.1" \\
     "shapely==2.2.0"
+
+# Pre-install nvm + Node 22 + opencode-ai so Harbor agent setup is near-instant
+ENV NVM_DIR=/root/.nvm
+RUN curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash \\
+    && . "$NVM_DIR/nvm.sh" \\
+    && nvm install 22 \\
+    && nvm alias default 22 \\
+    && npm i -g opencode-ai@latest
+ENV NPM_CONFIG_PREFER_OFFLINE=true
 
 COPY cad_env /opt/cad_env
 COPY cad-sim /usr/local/bin/cad-sim
@@ -420,6 +431,10 @@ def main(argv: list[str] | None = None) -> int:
         "GOOGLE_GENERATIVE_AI_API_KEY"
     ):
         os.environ["GOOGLE_GENERATIVE_AI_API_KEY"] = os.environ["GEMINI_API_KEY"]
+    elif os.environ.get("GOOGLE_GENERATIVE_AI_API_KEY") and not os.environ.get(
+        "GEMINI_API_KEY"
+    ):
+        os.environ["GEMINI_API_KEY"] = os.environ["GOOGLE_GENERATIVE_AI_API_KEY"]
 
     if args.agent == "opencode" and not args.model:
         args.model = os.environ.get("HARBOR_MODEL", "gemini/gemini-2.5-pro")
@@ -435,11 +450,41 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
+    agent_env_flags: list[str] = []
+    display_env_flags: list[str] = []
+    if args.agent not in ("oracle", "nop"):
+        agent_env_flags.extend(["--agent-setup-timeout-multiplier", "3.0"])
+        display_env_flags.extend(["--agent-setup-timeout-multiplier", "3.0"])
+        google_key = os.environ.get("GOOGLE_GENERATIVE_AI_API_KEY") or os.environ.get(
+            "GEMINI_API_KEY"
+        )
+        if google_key:
+            agent_env_flags.extend(
+                [
+                    "--ae",
+                    f"GOOGLE_GENERATIVE_AI_API_KEY={google_key}",
+                    "--ae",
+                    f"GEMINI_API_KEY={google_key}",
+                ]
+            )
+            display_env_flags.extend(
+                [
+                    "--ae",
+                    "GOOGLE_GENERATIVE_AI_API_KEY=***",
+                    "--ae",
+                    "GEMINI_API_KEY=***",
+                ]
+            )
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        if openai_key:
+            agent_env_flags.extend(["--ae", f"OPENAI_API_KEY={openai_key}"])
+            display_env_flags.extend(["--ae", "OPENAI_API_KEY=***"])
+
     target_ids = (
         list(HARBOR_TASK_BUILDERS.keys()) if args.task == "all" else [args.task]
     )
     for tid in target_ids:
-        harbor_cmd = [
+        base_cmd = [
             "uvx",
             "harbor",
             "run",
@@ -449,8 +494,9 @@ def main(argv: list[str] | None = None) -> int:
             args.agent,
         ]
         if args.model:
-            harbor_cmd.extend(["-m", args.model])
-        print("Running:", " ".join(harbor_cmd))
+            base_cmd.extend(["-m", args.model])
+        harbor_cmd = [*base_cmd, *agent_env_flags]
+        print("Running:", " ".join([*base_cmd, *display_env_flags]))
         res = subprocess.run(harbor_cmd, cwd=REPO_ROOT)
         if res.returncode != 0:
             return res.returncode

@@ -1,0 +1,92 @@
+{
+  "problem_name": "Multi-Load Suspension Rocker",
+  "volume_fraction": 0.39916,
+  "actions": [
+    {
+      "action_type": "rect",
+      "params": [
+        3.8421,
+        20.0,
+        7.6841,
+        40.0
+      ],
+      "description": "Cut rect at (3.8, 20.0) 7.7x40.0",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "rect",
+      "params": [
+        73.4953,
+        20.0,
+        13.0095,
+        40.0
+      ],
+      "description": "Cut rect at (73.5, 20.0) 13.0x40.0",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "polygon",
+      "params": [
+        0.0,
+        28.024,
+        64.0,
+        30.4591,
+        80.0,
+        40.0,
+        0.0,
+        40.0,
+        2.0
+      ],
+      "description": "Cut 4-gon pocket (fillet=2.0)",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "polygon",
+      "params": [
+        0.0,
+        13.2529,
+        64.0,
+        8.3417,
+        80.0,
+        0.0,
+        0.0,
+        0.0,
+        2.0
+      ],
+      "description": "Cut 4-gon pocket (fillet=2.0)",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "polygon",
+      "params": [
+        18.7269,
+        24.5939,
+        60.7369,
+        30.1483,
+        64.4275,
+        12.6168,
+        5.7733
+      ],
+      "description": "Cut 3-gon pocket (fillet=5.8)",
+      "mirror_x": false,
+      "mirror_y": false
+    },
+    {
+      "action_type": "rect",
+      "params": [
+        70.0,
+        20.0,
+        4.5009,
+        25.4975,
+        2.0
+      ],
+      "description": "Cut rect at (70.0, 20.0) 4.5x25.5 r=2.0",
+      "mirror_x": false,
+      "mirror_y": false
+    }
+  ]
+}
