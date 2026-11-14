@@ -1,8 +1,11 @@
 from collections.abc import Sequence
 import hashlib
+import io
 import json
 from pathlib import Path
+from typing import Any
 
+from matplotlib.figure import Figure
 import streamlit as st
 
 from src.agents.csg import CADModel
@@ -12,6 +15,7 @@ from src.agents.problem import DesignProblem
 from src.agents.solutions import (
     PROBLEM_PRESETS,
     InRepoSolverName,
+    ReplayFrame,
     SolutionRecord,
     _problem_short_id,
     build_comparison_rows,
@@ -60,6 +64,53 @@ def _problem_signature(problem: DesignProblem) -> str:
     return json.dumps(problem.to_dict(), sort_keys=True)
 
 
+def _history_signature(model: CADModel | None) -> str:
+    if model is None:
+        return "continuous"
+    return json.dumps([a.to_dict() for a in model.history], sort_keys=True)
+
+
+def _figure_to_png_bytes(fig: Figure) -> bytes:
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png")
+    return buf.getvalue()
+
+
+def _get_cached_human_solution(
+    problem: DesignProblem, human_model: CADModel
+) -> SolutionRecord:
+    cache: dict[tuple[str, str], SolutionRecord] = st.session_state.setdefault(
+        "_human_solution_cache", {}
+    )
+    key = (_problem_signature(problem), _history_signature(human_model))
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    sol = build_human_solution(problem, human_model)
+    cache[key] = sol
+    return sol
+
+
+def _get_cached_replay_frames(
+    solution_id: str, cad_model: CADModel, load_case_index: int | None
+) -> list[ReplayFrame]:
+    cache: dict[tuple[str, str, str, int | None], list[ReplayFrame]] = (
+        st.session_state.setdefault("_replay_frames_cache", {})
+    )
+    key = (
+        solution_id,
+        _problem_signature(cad_model.problem),
+        _history_signature(cad_model),
+        load_case_index,
+    )
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    frames = replay_cutout_history(cad_model, load_case_index=load_case_index)
+    cache[key] = frames
+    return frames
+
+
 def _clamp_load_case_index(
     problem: DesignProblem, requested_index: int | None
 ) -> int | None:
@@ -101,52 +152,65 @@ def _render_stock_problem_preview(
     load_case_index: int | None,
     log_strain: bool,
 ) -> None:
-    stock_model = CADModel(problem)
-    stock_density = stock_model.to_density_grid()
     effective_case = _clamp_load_case_index(problem, load_case_index)
-    stock_fea = compute_load_case_fea(
-        problem, stock_density, load_case_index=effective_case, penalty=1.0
+    png_cache: dict[tuple[Any, ...], tuple[bytes, bytes, bytes]] = (
+        st.session_state.setdefault("_plot_png_cache", {})
     )
-    case_tag = (
-        f" [Case {effective_case + 1}]"
-        if effective_case is not None
-        else (" [All Cases]" if len(problem.effective_load_cases) > 1 else "")
-    )
+    cache_key = ("stock", _problem_signature(problem), effective_case, log_strain)
+    cached_pngs = png_cache.get(cache_key)
+    if cached_pngs is None:
+        stock_model = CADModel(problem)
+        stock_density = stock_model.to_density_grid()
+        stock_fea = compute_load_case_fea(
+            problem, stock_density, load_case_index=effective_case, penalty=1.0
+        )
+        case_tag = (
+            f" [Case {effective_case + 1}]"
+            if effective_case is not None
+            else (" [All Cases]" if len(problem.effective_load_cases) > 1 else "")
+        )
+        cached_pngs = (
+            _figure_to_png_bytes(
+                render_model_geometry_figure(
+                    problem=problem,
+                    cad_model=stock_model,
+                    density=stock_density,
+                    load_case_index=effective_case,
+                    title=f"{problem.name} — Stock Geometry{case_tag}",
+                )
+            ),
+            _figure_to_png_bytes(
+                render_fea_field_figure(
+                    problem=problem,
+                    density=stock_density,
+                    fea_result=stock_fea,
+                    field="stress",
+                    cad_model=stock_model,
+                    log_scale=False,
+                    title=f"Stock Von Mises Stress{case_tag} (Max={float(stock_fea.von_mises_stress.max()):.3f})",
+                )
+            ),
+            _figure_to_png_bytes(
+                render_fea_field_figure(
+                    problem=problem,
+                    density=stock_density,
+                    fea_result=stock_fea,
+                    field="strain_energy",
+                    cad_model=stock_model,
+                    log_scale=log_strain,
+                    title=f"Stock Strain Energy{case_tag} (C={stock_fea.compliance:.2f})",
+                )
+            ),
+        )
+        png_cache[cache_key] = cached_pngs
+
     col_model, col_stress, col_strain = st.columns(3)
     with col_model:
-        st.pyplot(
-            render_model_geometry_figure(
-                problem=problem,
-                cad_model=stock_model,
-                density=stock_density,
-                load_case_index=effective_case,
-                title=f"{problem.name} — Stock Geometry{case_tag}",
-            )
-        )
+        st.image(cached_pngs[0], width="stretch")
     with col_stress:
-        st.pyplot(
-            render_fea_field_figure(
-                problem=problem,
-                density=stock_density,
-                fea_result=stock_fea,
-                field="stress",
-                cad_model=stock_model,
-                log_scale=False,
-                title=f"Stock Von Mises Stress{case_tag} (Max={float(stock_fea.von_mises_stress.max()):.3f})",
-            )
-        )
+        st.image(cached_pngs[1], width="stretch")
     with col_strain:
-        st.pyplot(
-            render_fea_field_figure(
-                problem=problem,
-                density=stock_density,
-                fea_result=stock_fea,
-                field="strain_energy",
-                cad_model=stock_model,
-                log_scale=log_strain,
-                title=f"Stock Strain Energy{case_tag} (C={stock_fea.compliance:.2f})",
-            )
-        )
+        st.image(cached_pngs[2], width="stretch")
 
 
 def _render_three_panel_views(
@@ -155,22 +219,36 @@ def _render_three_panel_views(
     load_case_index: int | None,
     log_strain: bool,
     highlight_cutout: bool = True,
+    cache_key: tuple[Any, ...] | None = None,
 ) -> None:
     effective_case = _clamp_load_case_index(problem, load_case_index)
-    views = render_solution_views(
-        solution_or_frame,
-        problem=problem,
-        load_case_index=effective_case,
-        log_strain=log_strain,
-        highlight_cutout=highlight_cutout,
+    png_cache: dict[tuple[Any, ...], tuple[bytes, bytes, bytes]] = (
+        st.session_state.setdefault("_plot_png_cache", {})
     )
+    cached_pngs = png_cache.get(cache_key) if cache_key is not None else None
+    if cached_pngs is None:
+        views = render_solution_views(
+            solution_or_frame,
+            problem=problem,
+            load_case_index=effective_case,
+            log_strain=log_strain,
+            highlight_cutout=highlight_cutout,
+        )
+        cached_pngs = (
+            _figure_to_png_bytes(views.model_figure),
+            _figure_to_png_bytes(views.stress_figure),
+            _figure_to_png_bytes(views.strain_figure),
+        )
+        if cache_key is not None:
+            png_cache[cache_key] = cached_pngs
+
     col_model, col_stress, col_strain = st.columns(3)
     with col_model:
-        st.pyplot(views.model_figure)
+        st.image(cached_pngs[0], width="stretch")
     with col_stress:
-        st.pyplot(views.stress_figure)
+        st.image(cached_pngs[1], width="stretch")
     with col_strain:
-        st.pyplot(views.strain_figure)
+        st.image(cached_pngs[2], width="stretch")
 
 
 def main() -> None:
@@ -446,6 +524,8 @@ def main() -> None:
         if active_upload_key is not None:
             st.session_state["_cleared_upload_keys"].add(active_upload_key)
         st.session_state["loaded_solutions"] = {}
+        st.session_state.pop("_replay_frames_cache", None)
+        st.session_state.pop("_plot_png_cache", None)
         st.session_state.pop("active_replay_model", None)
         st.session_state.pop("active_replay_label", None)
         st.session_state.pop("replay_solution_selector", None)
@@ -511,7 +591,7 @@ def main() -> None:
                 *other_problem_solutions,
             ]
         if include_human:
-            displayed_solutions.append(build_human_solution(problem, human_model))
+            displayed_solutions.append(_get_cached_human_solution(problem, human_model))
 
         if displayed_solutions:
             st.subheader("📊 Unified Comparison Scoreboard")
@@ -551,6 +631,15 @@ def main() -> None:
                         load_case_index=selected_load_case,
                         log_strain=log_strain,
                         highlight_cutout=False,
+                        cache_key=(
+                            "compare",
+                            sol.solution_id,
+                            _problem_signature(sol.problem),
+                            _history_signature(sol.cad_model),
+                            _clamp_load_case_index(sol.problem, selected_load_case),
+                            log_strain,
+                            False,
+                        ),
                     )
                     st.divider()
         else:
@@ -573,7 +662,7 @@ def main() -> None:
             for sol in loaded_solutions.values()
         )
         if not has_current_problem_solution or len(human_model.history) > 0:
-            human_sol = build_human_solution(problem, human_model)
+            human_sol = _get_cached_human_solution(problem, human_model)
             replay_candidates[human_sol.solution_id] = human_sol
 
         candidate_ids = list(replay_candidates.keys())
@@ -678,8 +767,10 @@ def main() -> None:
                     )
                 )
 
-            frames = replay_cutout_history(
-                cad_target, load_case_index=effective_replay_case
+            frames = _get_cached_replay_frames(
+                selected_replay_id,
+                cad_target,
+                load_case_index=effective_replay_case,
             )
             current_frame = frames[active_step]
             st.session_state["active_replay_model"] = current_frame.cad_model
@@ -718,20 +809,48 @@ def main() -> None:
                     f"`params={tuple(round(v, 3) for v in act.params)}`{mirror_str} — {act.description}"
                 )
 
+            replay_prob_sig = _problem_signature(replay_sol.problem)
+            replay_hist_sig = _history_signature(cad_target)
             _render_three_panel_views(
                 current_frame,
                 problem=replay_sol.problem,
                 load_case_index=effective_replay_case,
                 log_strain=log_strain,
                 highlight_cutout=True,
+                cache_key=(
+                    "replay_frame",
+                    selected_replay_id,
+                    replay_prob_sig,
+                    replay_hist_sig,
+                    active_step,
+                    effective_replay_case,
+                    log_strain,
+                    True,
+                ),
             )
 
             if len(frames) > 1:
                 st.markdown("##### Cutout History Trajectory (0..N)")
-                traj_fig = render_replay_trajectory_figure(
-                    frames, replay_sol.problem, active_step=active_step
+                png_cache: dict[tuple[Any, ...], Any] = st.session_state.setdefault(
+                    "_plot_png_cache", {}
                 )
-                st.pyplot(traj_fig)
+                traj_key = (
+                    "replay_traj",
+                    selected_replay_id,
+                    replay_prob_sig,
+                    replay_hist_sig,
+                    effective_replay_case,
+                    active_step,
+                )
+                traj_png = png_cache.get(traj_key)
+                if traj_png is None:
+                    traj_png = _figure_to_png_bytes(
+                        render_replay_trajectory_figure(
+                            frames, replay_sol.problem, active_step=active_step
+                        )
+                    )
+                    png_cache[traj_key] = traj_png
+                st.image(traj_png, width="stretch")
 
             step_rows = [
                 {
@@ -849,7 +968,7 @@ def main() -> None:
                     st.rerun()
 
         with col_view:
-            human_sol_view = build_human_solution(problem, human_model)
+            human_sol_view = _get_cached_human_solution(problem, human_model)
             st.caption(
                 f"Cutouts: {len(human_model.history)} | "
                 f"Volume: {human_model.get_volume_fraction():.3f} | "
@@ -862,6 +981,14 @@ def main() -> None:
                 load_case_index=selected_load_case,
                 log_strain=log_strain,
                 highlight_cutout=False,
+                cache_key=(
+                    "human_view",
+                    prob_sig,
+                    _history_signature(human_model),
+                    _clamp_load_case_index(problem, selected_load_case),
+                    log_strain,
+                    False,
+                ),
             )
 
         st.divider()
