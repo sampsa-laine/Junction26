@@ -1,12 +1,18 @@
 from collections.abc import Sequence
 import io
 import json
+import math
 from pathlib import Path
 from typing import Any
 
 from matplotlib.figure import Figure
 import streamlit as st
 
+from src.agents.cad_canvas import (
+    CAD_CANVAS_COMPONENT,
+    apply_canvas_action,
+    build_canvas_payload,
+)
 from src.agents.csg import CADModel
 from src.agents.problem import DesignProblem
 from src.agents.solutions import (
@@ -106,6 +112,18 @@ def _clamp_load_case_index(
     if 0 <= requested_index < len(problem.effective_load_cases):
         return requested_index
     return None
+
+
+def _solution_display_rank(sol: SolutionRecord) -> int:
+    if sol.source_kind == "harbor_run":
+        return 0
+    if sol.source_kind == "in_repo_solver" and sol.solver_name == "oracle_solver":
+        return 1
+    if sol.source_kind == "in_repo_solver" and sol.solver_name == "simp":
+        return 2
+    if sol.source_kind == "human":
+        return 4
+    return 3
 
 
 def _preferred_replay_solution_id(
@@ -240,14 +258,29 @@ def _render_three_panel_views(
 
 def main() -> None:
     st.set_page_config(
-        page_title="2D CAD TopOpt Inspector & Arena", page_icon="🏗️", layout="wide"
+        page_title="2D CAD Topology Optimization Inspector",
+        layout="wide",
     )
     st.markdown(
-        "<style>[data-testid='stStatusWidget'] { display: none !important; }</style>",
+        """
+        <style>
+        [data-testid='stStatusWidget'] { display: none !important; }
+        .block-container { padding-top: 2rem; }
+        [data-testid='stMetric'] {
+            border: 1px solid rgba(128, 128, 128, 0.22);
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+            background-color: rgba(128, 128, 128, 0.04);
+        }
+        .stTabs [data-baseweb="tab"] {
+            font-weight: 600;
+        }
+        </style>
+        """,
         unsafe_allow_html=True,
     )
 
-    st.title("🏗️ 2D CAD Topology Optimization Evaluation & Replay Inspector")
+    st.title("2D CAD Topology Optimization Inspector")
     st.caption(
         "Compare Harbor benchmark runs and in-repo solvers with FEA stress/strain fields and step-by-step CSG cutout replay"
     )
@@ -289,6 +322,7 @@ def main() -> None:
         if problem_changed:
             st.session_state["filter_compare_current_problem"] = True
             st.session_state["include_human_compare"] = False
+            st.session_state.pop("human_fea_snapshot", None)
             matching_loaded = [
                 sol
                 for sol in st.session_state["loaded_solutions"].values()
@@ -303,6 +337,7 @@ def main() -> None:
 
     selected_load_case: int | None = None
 
+    st.sidebar.divider()
     st.sidebar.header("Agent Solution")
     discovered_paths = discover_harbor_runs("jobs")
     filter_to_task = st.sidebar.checkbox(
@@ -333,7 +368,7 @@ def main() -> None:
         key="selected_harbor_trials",
     )
     newly_loaded_external: list[SolutionRecord] = []
-    if st.sidebar.button("📥 Load Selected Harbor Trials", key="load_harbor_btn"):
+    if st.sidebar.button("Load Selected Harbor Trials", key="load_harbor_btn"):
         for t_str in selected_trial_strs:
             try:
                 rec = load_harbor_trial(trial_option_map[t_str])
@@ -352,9 +387,8 @@ def main() -> None:
             _preferred_replay_solution_id(newly_loaded_external)
         )
 
-    if st.sidebar.button(
-        "🚀 Run In-Repo Solvers", type="primary", key="run_solvers_btn"
-    ):
+    st.sidebar.divider()
+    if st.sidebar.button("Run In-Repo Solvers", type="primary", key="run_solvers_btn"):
         stale_solver_ids = [
             sid
             for sid, sol in st.session_state["loaded_solutions"].items()
@@ -384,9 +418,9 @@ def main() -> None:
 
     tab_compare, tab_replay, tab_human = st.tabs(
         [
-            "🔍 Solution Comparison & Inspection",
-            "⏪ Cutout History Replay",
-            "✏️ Human Canvas",
+            "Comparison & Inspection",
+            "Cutout History Replay",
+            "Human Canvas",
         ]
     )
 
@@ -405,22 +439,31 @@ def main() -> None:
         )
 
         if only_current:
-            displayed_solutions: list[SolutionRecord] = [
-                sol
-                for sol in loaded_solutions.values()
-                if _problem_signature(sol.problem) == prob_sig
-            ]
+            displayed_solutions: list[SolutionRecord] = sorted(
+                (
+                    sol
+                    for sol in loaded_solutions.values()
+                    if _problem_signature(sol.problem) == prob_sig
+                ),
+                key=_solution_display_rank,
+            )
         else:
-            current_problem_solutions = [
-                sol
-                for sol in loaded_solutions.values()
-                if _problem_signature(sol.problem) == prob_sig
-            ]
-            other_problem_solutions = [
-                sol
-                for sol in loaded_solutions.values()
-                if _problem_signature(sol.problem) != prob_sig
-            ]
+            current_problem_solutions = sorted(
+                (
+                    sol
+                    for sol in loaded_solutions.values()
+                    if _problem_signature(sol.problem) == prob_sig
+                ),
+                key=_solution_display_rank,
+            )
+            other_problem_solutions = sorted(
+                (
+                    sol
+                    for sol in loaded_solutions.values()
+                    if _problem_signature(sol.problem) != prob_sig
+                ),
+                key=_solution_display_rank,
+            )
             displayed_solutions = [
                 *current_problem_solutions,
                 *other_problem_solutions,
@@ -429,13 +472,13 @@ def main() -> None:
             displayed_solutions.append(_get_cached_human_solution(problem, human_model))
 
         if displayed_solutions:
-            st.subheader("📊 Unified Comparison Scoreboard")
+            st.subheader("Unified Comparison Scoreboard")
             rows = build_comparison_rows(displayed_solutions)
             st.table(rows)
 
-            st.subheader("🔬 Resulting Model, Stress & Strain Inspection")
+            st.subheader("Resulting Model, Stress & Strain Inspection")
             with st.expander(
-                "ℹ️ How Harbor Reward & Its 4 Factors Are Calculated",
+                "How Harbor Reward & Its 4 Factors Are Calculated",
                 expanded=False,
             ):
                 st.markdown(
@@ -499,7 +542,7 @@ def main() -> None:
                     )
                     st.divider()
         else:
-            st.subheader(f"📐 Selected Problem Geometry (`{problem.name}`)")
+            st.subheader(f"Selected Problem Geometry ({problem.name})")
             _render_stock_problem_preview(
                 problem=problem,
                 load_case_index=selected_load_case,
@@ -511,7 +554,7 @@ def main() -> None:
             )
 
     with tab_replay:
-        st.subheader("⏪ Step-by-Step Saved Cutout History Replay (0..N)")
+        st.subheader("Step-by-Step Cutout History Replay (0..N)")
         replay_candidates: dict[str, SolutionRecord] = dict(loaded_solutions)
         has_current_problem_solution = any(
             _problem_signature(sol.problem) == prob_sig
@@ -573,7 +616,7 @@ def main() -> None:
             st.session_state.pop("_replay_slider_max", None)
             st.info(
                 "Continuous SIMP density solutions do not contain parametric CSG `CutoutAction` history. "
-                "Select a parametric `CADModel` solution (Harbor agent solution, Oracle Solver, "
+                "Select a parametric `CADModel` solution (AI Agent, Reference Solution, "
                 "or Human Designer) to step through cutouts `0..N`."
             )
         else:
@@ -634,16 +677,27 @@ def main() -> None:
                 f"{replay_sol.label} (Step {active_step}/{total_steps})"
             )
 
-            r1, r2, r3, r4 = st.columns(4)
+            r1, r2, r3, r4, r5 = st.columns(5)
             r1.metric("Step", f"{active_step} / {total_steps}")
             r2.metric(
-                "Volume Fraction",
-                f"{current_frame.volume_fraction:.4f} (target <= {replay_sol.problem.target_volume_fraction:.2f})",
+                "Weight",
+                f"{current_frame.volume_fraction:.3f} (<= {replay_sol.problem.target_volume_fraction:.2f})",
             )
-            r3.metric("Compliance", f"{current_frame.compliance:.2f}")
+            r3.metric(
+                "Compliance",
+                f"{current_frame.compliance:.2f}"
+                if math.isfinite(current_frame.compliance)
+                else "inf",
+            )
             r4.metric(
-                "Max Von Mises / Connected",
-                f"{current_frame.max_von_mises_stress:.3f} | {'Yes' if current_frame.structurally_connected else 'No'}",
+                "Max Von Mises",
+                f"{current_frame.max_von_mises_stress:.3f}"
+                if replay_sol.problem.max_stress_limit is None
+                else f"{current_frame.max_von_mises_stress:.3f} (<= {replay_sol.problem.max_stress_limit:.2f})",
+            )
+            r5.metric(
+                "Connected",
+                "Yes" if current_frame.structurally_connected else "No",
             )
 
             if current_frame.action is None:
@@ -708,16 +762,30 @@ def main() -> None:
                     png_cache[traj_key] = traj_png
                 st.image(traj_png, width="stretch")
 
+            replay_stress_limit = replay_sol.problem.max_stress_limit
             step_rows = [
                 {
                     "Step": f.step,
-                    "Action": f.action.action_type if f.action else "stock",
-                    "Description": f.action.description
-                    if f.action
-                    else "Initial stock domain",
-                    "Volume": f"{f.volume_fraction:.4f}",
-                    "Compliance": f"{f.compliance:.2f}",
-                    "Max Stress": f"{f.max_von_mises_stress:.3f}",
+                    "Action": (
+                        f.action.action_type.replace("_", " ").title()
+                        if f.action
+                        else "Stock"
+                    ),
+                    "Description": (
+                        f.action.description if f.action else "Initial stock domain"
+                    ),
+                    "Volume / Target": (
+                        f"{f.volume_fraction:.3f} / "
+                        f"{replay_sol.problem.target_volume_fraction:.2f}"
+                    ),
+                    "Compliance": (
+                        f"{f.compliance:.2f}" if math.isfinite(f.compliance) else "inf"
+                    ),
+                    "Max Stress / Limit": (
+                        f"{f.max_von_mises_stress:.3f} / {replay_stress_limit:.2f}"
+                        if replay_stress_limit is not None
+                        else f"{f.max_von_mises_stress:.3f}"
+                    ),
                     "Connected": "Yes" if f.structurally_connected else "No",
                 }
                 for f in frames
@@ -725,127 +793,283 @@ def main() -> None:
             st.table(step_rows)
 
     with tab_human:
-        st.subheader("✏️ Interactive Human Designer Canvas")
+        st.subheader("Interactive Human Designer Canvas")
         col_tools, col_view = st.columns([1, 3])
         with col_tools:
             cut_type = st.radio(
-                "Cutout Primitive",
-                ["Circular Hole", "Rectangular Cutout", "Slot Cutout"],
+                "Cutout Tool",
+                [
+                    "Polygon Cutout",
+                    "Circular Hole",
+                    "Rectangular Cutout",
+                    "Slot Cutout",
+                ],
                 key="human_cut_type",
             )
-            if cut_type == "Circular Hole":
-                hx = st.slider(
-                    "Center X",
-                    0.0,
-                    float(problem.width),
-                    float(problem.width / 2.0),
-                    key="human_cx",
+            grid_snap = float(
+                st.selectbox(
+                    "Grid Snap",
+                    options=[0.0, 0.5, 1.0, 2.0, 5.0],
+                    index=1,
+                    format_func=lambda v: "Off" if v == 0.0 else f"{v:g}",
+                    key="human_grid_snap",
                 )
-                hy = st.slider(
-                    "Center Y",
-                    0.0,
-                    float(problem.height),
-                    float(problem.height / 2.0),
-                    key="human_cy",
+            )
+            tool_fillet = 0.0
+            tool_slot_radius = 2.5
+            if cut_type in ("Polygon Cutout", "Rectangular Cutout"):
+                tool_fillet = float(
+                    st.slider(
+                        "Corner Fillet",
+                        0.0,
+                        4.0,
+                        1.0 if cut_type == "Rectangular Cutout" else 0.0,
+                        key="human_rf",
+                    )
                 )
-                hr = st.slider(
-                    "Radius",
-                    float(problem.min_feature_radius),
-                    float(min(problem.width, problem.height) / 3.0),
-                    4.0,
-                    key="human_cr",
+            elif cut_type == "Slot Cutout":
+                tool_slot_radius = float(
+                    st.slider(
+                        "Slot Radius",
+                        float(problem.min_feature_radius),
+                        6.0,
+                        2.5,
+                        key="human_sr",
+                    )
                 )
-                if st.button("➕ Cut Circle", key="human_cut_circle_btn"):
-                    if human_model.cut_circle(hx, hy, hr):
-                        st.session_state["_enable_human_compare_next_run"] = True
-                        st.rerun()
-                    else:
-                        st.warning(
-                            "Cutout rejected (outside material or inside solid keepout)."
-                        )
-            elif cut_type == "Rectangular Cutout":
-                rx = st.slider(
-                    "Corner X", 0.0, float(problem.width - 4.0), 10.0, key="human_rx"
-                )
-                ry = st.slider(
-                    "Corner Y", 0.0, float(problem.height - 4.0), 5.0, key="human_ry"
-                )
-                rw = st.slider(
-                    "Width", 3.0, float(problem.width / 2.0), 10.0, key="human_rw"
-                )
-                rh = st.slider(
-                    "Height", 3.0, float(problem.height / 2.0), 5.0, key="human_rh"
-                )
-                rfillet = st.slider("Corner Fillet", 0.0, 4.0, 1.0, key="human_rf")
-                if st.button("➕ Cut Rectangle", key="human_cut_rect_btn"):
-                    if human_model.cut_rect(rx, ry, rw, rh, fillet_radius=rfillet):
-                        st.session_state["_enable_human_compare_next_run"] = True
-                        st.rerun()
-                    else:
-                        st.warning(
-                            "Cutout rejected (outside material or inside solid keepout)."
-                        )
-            else:
-                sx1 = st.slider(
-                    "Start X", 0.0, float(problem.width), 15.0, key="human_sx1"
-                )
-                sy1 = st.slider(
-                    "Start Y", 0.0, float(problem.height), 15.0, key="human_sy1"
-                )
-                sx2 = st.slider(
-                    "End X", 0.0, float(problem.width), 35.0, key="human_sx2"
-                )
-                sy2 = st.slider(
-                    "End Y", 0.0, float(problem.height), 15.0, key="human_sy2"
-                )
-                sr = st.slider(
-                    "Slot Radius",
-                    float(problem.min_feature_radius),
-                    6.0,
-                    2.5,
-                    key="human_sr",
-                )
-                if st.button("➕ Cut Slot", key="human_cut_slot_btn"):
-                    if human_model.cut_slot(sx1, sy1, sx2, sy2, sr):
-                        st.session_state["_enable_human_compare_next_run"] = True
-                        st.rerun()
-                    else:
-                        st.warning(
-                            "Cutout rejected (degenerate slot, outside material, or inside solid keepout)."
-                        )
 
             c_undo, c_reset = st.columns(2)
-            if c_undo.button("↩️ Undo", key="human_undo_btn"):
+            if c_undo.button("Undo", key="human_undo_btn"):
                 if human_model.undo():
                     st.rerun()
-            if c_reset.button("🔄 Reset", key="human_reset_btn"):
+            if c_reset.button("Reset", key="human_reset_btn"):
                 if len(human_model.history) > 0:
                     human_model.reset()
                     st.rerun()
 
+            if cut_type != "Polygon Cutout":
+                with st.expander("Manual Coordinate Entry", expanded=False):
+                    if cut_type == "Circular Hole":
+                        hx = st.slider(
+                            "Center X",
+                            0.0,
+                            float(problem.width),
+                            float(problem.width / 2.0),
+                            key="human_cx",
+                        )
+                        hy = st.slider(
+                            "Center Y",
+                            0.0,
+                            float(problem.height),
+                            float(problem.height / 2.0),
+                            key="human_cy",
+                        )
+                        hr = st.slider(
+                            "Radius",
+                            float(problem.min_feature_radius),
+                            float(min(problem.width, problem.height) / 3.0),
+                            4.0,
+                            key="human_cr",
+                        )
+                        if st.button("Cut Circle", key="human_cut_circle_btn"):
+                            if human_model.cut_circle(hx, hy, hr):
+                                st.session_state["_enable_human_compare_next_run"] = (
+                                    True
+                                )
+                                st.rerun()
+                            else:
+                                st.warning(
+                                    "Cutout rejected (outside material or inside solid keepout)."
+                                )
+                    elif cut_type == "Rectangular Cutout":
+                        rx = st.slider(
+                            "Corner X",
+                            0.0,
+                            float(problem.width - 4.0),
+                            10.0,
+                            key="human_rx",
+                        )
+                        ry = st.slider(
+                            "Corner Y",
+                            0.0,
+                            float(problem.height - 4.0),
+                            5.0,
+                            key="human_ry",
+                        )
+                        rw = st.slider(
+                            "Width",
+                            3.0,
+                            float(problem.width / 2.0),
+                            10.0,
+                            key="human_rw",
+                        )
+                        rh = st.slider(
+                            "Height",
+                            3.0,
+                            float(problem.height / 2.0),
+                            5.0,
+                            key="human_rh",
+                        )
+                        if st.button("Cut Rectangle", key="human_cut_rect_btn"):
+                            if human_model.cut_rect(
+                                rx, ry, rw, rh, fillet_radius=tool_fillet
+                            ):
+                                st.session_state["_enable_human_compare_next_run"] = (
+                                    True
+                                )
+                                st.rerun()
+                            else:
+                                st.warning(
+                                    "Cutout rejected (outside material or inside solid keepout)."
+                                )
+                    else:
+                        sx1 = st.slider(
+                            "Start X", 0.0, float(problem.width), 15.0, key="human_sx1"
+                        )
+                        sy1 = st.slider(
+                            "Start Y", 0.0, float(problem.height), 15.0, key="human_sy1"
+                        )
+                        sx2 = st.slider(
+                            "End X", 0.0, float(problem.width), 35.0, key="human_sx2"
+                        )
+                        sy2 = st.slider(
+                            "End Y", 0.0, float(problem.height), 15.0, key="human_sy2"
+                        )
+                        if st.button("Cut Slot", key="human_cut_slot_btn"):
+                            if human_model.cut_slot(
+                                sx1, sy1, sx2, sy2, tool_slot_radius
+                            ):
+                                st.session_state["_enable_human_compare_next_run"] = (
+                                    True
+                                )
+                                st.rerun()
+                            else:
+                                st.warning(
+                                    "Cutout rejected (degenerate slot, outside material, or inside solid keepout)."
+                                )
+
+        current_hist_sig = _history_signature(human_model)
+        png_cache: dict[tuple[Any, ...], Any] = st.session_state.setdefault(
+            "_plot_png_cache", {}
+        )
+        tool_id_map = {
+            "Polygon Cutout": "polygon",
+            "Circular Hole": "circle",
+            "Rectangular Cutout": "rect",
+            "Slot Cutout": "slot",
+        }
+        canvas_payload = build_canvas_payload(
+            problem,
+            human_model,
+            tool=tool_id_map[cut_type],
+            fillet_radius=tool_fillet,
+            slot_radius=tool_slot_radius,
+            grid_snap=grid_snap,
+            problem_key=prob_sig,
+        )
+
         with col_view:
-            human_sol_view = _get_cached_human_solution(problem, human_model)
             st.caption(
                 f"Cutouts: {len(human_model.history)} | "
-                f"Volume: {human_model.get_volume_fraction():.3f} | "
-                f"Compliance: {human_sol_view.fea_result.compliance:.2f} | "
-                f"Harbor Reward: {human_sol_view.harbor_reward:.4f}"
+                f"Weight: {human_model.get_volume_fraction():.3f}"
             )
-            _render_three_panel_views(
+            canvas_warn = st.session_state.pop("_human_canvas_warning", None)
+            if canvas_warn:
+                st.warning(canvas_warn)
+            canvas_result = CAD_CANVAS_COMPONENT(
+                data=canvas_payload,
+                key="human_cad_canvas",
+                on_action_change=lambda: None,
+            )
+            pending_action = getattr(canvas_result, "action", None)
+            if isinstance(pending_action, dict):
+                nonce = pending_action.get("nonce")
+                if nonce and nonce != st.session_state.get("_human_canvas_last_nonce"):
+                    st.session_state["_human_canvas_last_nonce"] = nonce
+                    ok, err_msg = apply_canvas_action(human_model, pending_action)
+                    if ok:
+                        st.session_state["_enable_human_compare_next_run"] = True
+                        st.rerun()
+                    elif err_msg:
+                        st.session_state["_human_canvas_warning"] = err_msg
+                        st.rerun()
+
+        st.divider()
+        if st.button("Refresh Stress & Energy", key="human_refresh_fea_btn"):
+            human_sol_view = _get_cached_human_solution(problem, human_model)
+            st.session_state["human_fea_snapshot"] = (
+                prob_sig,
+                current_hist_sig,
                 human_sol_view,
-                problem=problem,
-                load_case_index=selected_load_case,
-                log_strain=log_strain,
-                highlight_cutout=False,
-                cache_key=(
-                    "human_view",
-                    prob_sig,
-                    _history_signature(human_model),
-                    _clamp_load_case_index(problem, selected_load_case),
-                    log_strain,
-                    False,
-                ),
             )
+
+        snapshot = st.session_state.get("human_fea_snapshot")
+        if snapshot is not None and snapshot[0] == prob_sig:
+            snap_hist_sig: str | None = snapshot[1]
+            snap_sol: SolutionRecord | None = snapshot[2]
+        else:
+            snap_hist_sig = None
+            snap_sol = None
+
+        if snap_sol is not None:
+            reward_str = (
+                f"{snap_sol.harbor_reward:.4f}"
+                if snap_sol.harbor_reward is not None
+                else "N/A"
+            )
+            stale_note = (
+                " (outdated — click Refresh Stress & Energy)"
+                if snap_hist_sig != current_hist_sig
+                else ""
+            )
+            st.caption(
+                f"Compliance: {snap_sol.fea_result.compliance:.2f} | "
+                f"Harbor Reward: {reward_str}{stale_note}"
+            )
+        else:
+            st.caption("Stress & Energy: not computed")
+
+        col_stress, col_strain = st.columns(2)
+        if snap_sol is not None:
+            fea_key = ("human_fea", prob_sig, snap_hist_sig, log_strain)
+            fea_pngs = png_cache.get(fea_key)
+            if fea_pngs is None:
+                fea_pngs = (
+                    _figure_to_png_bytes(
+                        render_fea_field_figure(
+                            problem=problem,
+                            density=snap_sol.density,
+                            fea_result=snap_sol.fea_result,
+                            field="stress",
+                            cad_model=snap_sol.cad_model,
+                            log_scale=False,
+                            title=f"Von Mises Stress (Max={float(snap_sol.fea_result.von_mises_stress.max()):.3f})",
+                        )
+                    ),
+                    _figure_to_png_bytes(
+                        render_fea_field_figure(
+                            problem=problem,
+                            density=snap_sol.density,
+                            fea_result=snap_sol.fea_result,
+                            field="strain_energy",
+                            cad_model=snap_sol.cad_model,
+                            log_scale=log_strain,
+                            title=f"Strain Energy (C={snap_sol.fea_result.compliance:.2f})",
+                        )
+                    ),
+                )
+                png_cache[fea_key] = fea_pngs
+            with col_stress:
+                st.image(fea_pngs[0], width="stretch")
+            with col_strain:
+                st.image(fea_pngs[1], width="stretch")
+        else:
+            with col_stress:
+                st.info("Click 'Refresh Stress & Energy' to compute stress plot.")
+            with col_strain:
+                st.info(
+                    "Click 'Refresh Stress & Energy' to compute strain energy plot."
+                )
 
 
 if __name__ == "__main__":
