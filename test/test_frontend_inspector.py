@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from streamlit.testing.v1 import AppTest
 
+from src.agents.cad_canvas import apply_canvas_action, build_canvas_payload
 from src.agents.csg import CADModel
 from src.agents.fea import FEAResult, FEASolver
 from src.agents.problem import (
@@ -40,6 +41,7 @@ from src.agents.solutions import (
 from src.agents.verifier import score_cad_submission
 from src.agents.visualizer import (
     compute_load_case_fea,
+    compute_replay_field_ranges,
     render_fea_field_figure,
     render_model_geometry_figure,
     render_replay_trajectory_figure,
@@ -790,12 +792,18 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             ["Human Designer (0 cutouts)"],
         )
 
+        at.radio(key="human_cut_type").set_value("Circular Hole").run(timeout=30)
         at.button(key="human_cut_circle_btn").click().run(timeout=30)
         self.assertEqual(len(at.exception), 0)
+        self.assertNotIn("human_fea_snapshot", at.session_state)
         self.assertEqual(
             at.selectbox(key="replay_solution_selector").options,
             ["Human Designer (1 cutouts)"],
         )
+
+        at.button(key="human_refresh_fea_btn").click().run(timeout=30)
+        self.assertEqual(len(at.exception), 0)
+        self.assertIn("human_fea_snapshot", at.session_state)
 
         at.radio(key="human_cut_type").set_value("Rectangular Cutout").run(timeout=30)
         self.assertEqual(len(at.exception), 0)
@@ -909,6 +917,7 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             at.run(timeout=30)
             self.assertEqual(len(at.exception), 0)
 
+            at.radio(key="human_cut_type").set_value("Circular Hole").run(timeout=30)
             at.button(key="human_cut_circle_btn").click().run(timeout=30)
             at.radio(key="human_cut_type").set_value("Rectangular Cutout").run(
                 timeout=30
@@ -951,8 +960,8 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(
             try1_headings,
             [
+                "#### Reference Solution (`Cantilever Lightweight Bracket`)",
                 "#### SIMP Topology Optimum (Continuous) (`Cantilever Lightweight Bracket`)",
-                "#### Oracle Solver (SIMP-to-CAD) (`Cantilever Lightweight Bracket`)",
             ],
         )
         try1_replay_id = at.selectbox(key="replay_solution_selector").value
@@ -982,8 +991,8 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(
             try2_headings,
             [
+                "#### Reference Solution (`Stress-Constrained L-Bracket`)",
                 "#### SIMP Topology Optimum (Continuous) (`Stress-Constrained L-Bracket`)",
-                "#### Oracle Solver (SIMP-to-CAD) (`Stress-Constrained L-Bracket`)",
             ],
         )
         try2_replay_id = at.selectbox(key="replay_solution_selector").value
@@ -992,6 +1001,88 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(
             at.session_state["loaded_solutions"][try2_replay_id].problem.name,
             "Stress-Constrained L-Bracket",
+        )
+
+    def test_cad_canvas_payload_and_polygon_cutout(self) -> None:
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        payload = build_canvas_payload(
+            prob,
+            model,
+            tool="polygon",
+            fillet_radius=0.5,
+            slot_radius=2.5,
+            grid_snap=0.5,
+            problem_key="cantilever",
+        )
+        self.assertEqual(payload["tool"], "polygon")
+        self.assertEqual(len(payload["polygons"]), 1)
+        self.assertGreaterEqual(len(payload["supports"]), 1)
+        self.assertGreaterEqual(len(payload["loads"]), 1)
+
+        ok, err = apply_canvas_action(
+            model,
+            {
+                "type": "polygon",
+                "points": [[20.0, 10.0], [32.0, 10.0], [26.0, 20.0]],
+                "fillet_radius": 0.5,
+            },
+        )
+        self.assertTrue(ok)
+        self.assertIsNone(err)
+        self.assertEqual(len(model.history), 1)
+        self.assertEqual(model.history[0].action_type, "polygon")
+
+        updated_payload = build_canvas_payload(
+            prob,
+            model,
+            tool="circle",
+            fillet_radius=0.0,
+            slot_radius=2.5,
+            grid_snap=0.5,
+            problem_key="cantilever",
+        )
+        self.assertEqual(len(updated_payload["polygons"][0]["holes"]), 1)
+
+        bad_ok, bad_err = apply_canvas_action(
+            model,
+            {
+                "type": "polygon",
+                "points": [[1.0, 1.0], [2.0, 2.0]],
+                "fillet_radius": 0.0,
+            },
+        )
+        self.assertFalse(bad_ok)
+        self.assertIsNotNone(bad_err)
+
+    def test_replay_heatmap_scale_is_constant_across_steps(self) -> None:
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        model.cut_circle(25.0, 15.0, 4.0)
+        model.cut_rect(35.0, 10.0, 8.0, 8.0, fillet_radius=1.0)
+        frames = replay_cutout_history(model)
+        stress_range, strain_range = compute_replay_field_ranges(
+            frames, log_strain=False
+        )
+        v0 = render_solution_views(
+            frames[0],
+            problem=prob,
+            stress_range=stress_range,
+            strain_range=strain_range,
+        )
+        v_last = render_solution_views(
+            frames[-1],
+            problem=prob,
+            stress_range=stress_range,
+            strain_range=strain_range,
+        )
+        self.assertEqual(
+            v0.stress_figure.axes[0].images[0].get_clim(),
+            v_last.stress_figure.axes[0].images[0].get_clim(),
+        )
+        self.assertEqual(
+            v0.strain_figure.axes[0].images[0].get_clim(),
+            v_last.strain_figure.axes[0].images[0].get_clim(),
         )
 
 

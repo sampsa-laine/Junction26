@@ -23,10 +23,27 @@ connectivity, wall thickness, feature violations, hotspots, and low-strain zones
 | --- | --- |
 | `uv sync` | Install project and development dependencies |
 | `uv run junction26` | Run the application |
+| `uv run arena` | Launch interactive Streamlit Arena & Inspector |
+| `uv run harbor-tasks sync` | Sync `tasks/*` from `src/agents/` |
+| `uv run harbor-tasks run --task all --agent oracle` | Run Oracle reference across all 3 tasks |
+| `uv run build-site` | Build static showcase site in `site/` |
 | `uv run pytest` | Run unittest tests and doctests |
 | `uv run pytest -v` | Run tests with individual test names |
 
 See [project layout and testing](doc/project-layout.md) for details.
+
+## Building the static site
+
+```shell
+# Full build (renders FEA/CAD plots from jobs/ + tasks/ and builds site/index.html)
+uv run build-site
+
+# Fast rebuild after editing site/content/*.md (reuses existing PNGs)
+uv run build-site --skip-renders
+
+# Preview locally
+python3 -m http.server --directory site 8000
+```
 
 ## Adding `uv` targets
 

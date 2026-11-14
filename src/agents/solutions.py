@@ -673,10 +673,10 @@ def _read_optional_reward(
     return None
 
 
-def _extract_agent_solver_name(
+def _extract_agent_info_parts(
     result_payload: dict[str, Any] | None,
     config_payload: dict[str, Any] | None,
-) -> str:
+) -> tuple[str | None, str | None]:
     agent_name: str | None = None
     model_name: str | None = None
 
@@ -698,6 +698,14 @@ def _extract_agent_solver_name(
             elif isinstance(model_info, dict):
                 model_name = model_name or _as_optional_str(model_info.get("name"))
 
+    return agent_name, model_name
+
+
+def _extract_agent_solver_name(
+    result_payload: dict[str, Any] | None,
+    config_payload: dict[str, Any] | None,
+) -> str:
+    agent_name, model_name = _extract_agent_info_parts(result_payload, config_payload)
     if agent_name and model_name:
         return f"{agent_name} ({model_name})"
     return agent_name or "harbor_agent"
@@ -759,11 +767,12 @@ def load_harbor_trial(
     fea_res = solver.solve(density, penalty=1.0)
 
     ref_simp = reference_simp or get_cached_reference_simp(resolved_problem)
+    agent_name, model_name = _extract_agent_info_parts(result_payload, config_payload)
     solver_label = _extract_agent_solver_name(result_payload, config_payload)
     trial_name = (
         _as_optional_str(result_payload.get("trial_name")) if result_payload else None
     ) or trial_dir.name
-    display_label = f"Harbor [{solver_label}] — {trial_name}"
+    display_label = f"AI Agent: {model_name or agent_name or solver_label}"
 
     scoreboard = evaluate_design(
         display_label, density, resolved_problem, reference_simp=ref_simp, solver=solver
@@ -993,7 +1002,7 @@ def run_in_repo_solver(
 
     if normalized == "oracle_solver":
         cad_model = ParametricCADOptimizer(problem).optimize()
-        label = "Oracle Solver (SIMP-to-CAD)"
+        label = "Reference Solution"
         canonical_solver = "oracle_solver"
     else:
         raise ValueError(
