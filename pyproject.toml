@@ -26,6 +26,8 @@ dependencies = [
 [project.scripts]
 junction26 = "src.agents.main:main"
 arena = "src.agents.main:run_app"
+cad-sim = "src.agents.cad_cli:main"
+harbor-tasks = "src.agents.harbor_sync:main"
 
 
 [dependency-groups]

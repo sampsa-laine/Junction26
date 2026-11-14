@@ -1,0 +1,42 @@
+schema_version = "1.4"
+artifacts = ["/app/design.json"]
+
+[task]
+name = "junction26/cantilever-lightweight"
+version = "1.0.0"
+description = "Lightweight a 60x30 cantilever bracket to <=45% volume fraction while maximizing stiffness between the fixed left wall and the bottom-right load boss."
+authors = [{ name = "Junction26 Team", email = "team@junction26.local" }]
+keywords = ["cad", "fea", "topology-optimization", "mechanical-engineering", "simulation"]
+
+[metadata]
+author_name = "Junction26 Team"
+author_email = "team@junction26.local"
+difficulty = "easy"
+category = "scientific_computing"
+tags = ["cad", "fea", "structural-optimization", "csg"]
+expert_time_estimate_min = 15.0
+junior_time_estimate_min = 45.0
+
+[verifier]
+timeout_sec = 180.0
+environment_mode = "separate"
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 600.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+PYTHONPATH = "/opt"
+CAD_PROBLEM_PATH = "/app/problem.json"
+CAD_DESIGN_PATH = "/app/design.json"
+
+[solution.env]
+PYTHONPATH = "/solution:/opt"

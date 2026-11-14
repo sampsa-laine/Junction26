@@ -1,0 +1,42 @@
+schema_version = "1.4"
+artifacts = ["/app/design.json"]
+
+[task]
+name = "junction26/l-bracket-stress"
+version = "1.0.0"
+description = "Design a 50x50 L-bracket (<=36% domain area; stock L-shape starts at 64% area) that resists tip bending without exceeding the von Mises stress limit around the re-entrant (20, 20) inner corner."
+authors = [{ name = "Junction26 Team", email = "team@junction26.local" }]
+keywords = ["cad", "fea", "topology-optimization", "mechanical-engineering", "simulation"]
+
+[metadata]
+author_name = "Junction26 Team"
+author_email = "team@junction26.local"
+difficulty = "medium"
+category = "scientific_computing"
+tags = ["cad", "fea", "structural-optimization", "csg"]
+expert_time_estimate_min = 25.0
+junior_time_estimate_min = 60.0
+
+[verifier]
+timeout_sec = 180.0
+environment_mode = "separate"
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 600.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+PYTHONPATH = "/opt"
+CAD_PROBLEM_PATH = "/app/problem.json"
+CAD_DESIGN_PATH = "/app/design.json"
+
+[solution.env]
+PYTHONPATH = "/solution:/opt"

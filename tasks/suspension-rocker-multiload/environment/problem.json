@@ -1,0 +1,99 @@
+{
+  "name": "Multi-Load Suspension Rocker",
+  "width": 80.0,
+  "height": 40.0,
+  "nx": 64,
+  "ny": 32,
+  "supports": [
+    {
+      "x": 12.0,
+      "y": 20.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 5.0
+    }
+  ],
+  "loads": [
+    {
+      "x": 68.0,
+      "y": 31.0,
+      "fx": 0.0,
+      "fy": -1.4
+    },
+    {
+      "x": 68.0,
+      "y": 9.0,
+      "fx": -0.8,
+      "fy": 0.6
+    }
+  ],
+  "load_cases": [
+    [
+      {
+        "x": 68.0,
+        "y": 31.0,
+        "fx": 0.0,
+        "fy": -1.4
+      },
+      {
+        "x": 68.0,
+        "y": 9.0,
+        "fx": -0.8,
+        "fy": 0.6
+      }
+    ],
+    [
+      {
+        "x": 68.0,
+        "y": 31.0,
+        "fx": -0.7,
+        "fy": -0.35
+      },
+      {
+        "x": 68.0,
+        "y": 9.0,
+        "fx": 0.5,
+        "fy": -0.75
+      }
+    ]
+  ],
+  "keepouts": [
+    {
+      "shape": "circle",
+      "params": [
+        12.0,
+        20.0,
+        5.0
+      ],
+      "keepout_type": "solid"
+    },
+    {
+      "shape": "circle",
+      "params": [
+        68.0,
+        31.0,
+        4.0
+      ],
+      "keepout_type": "solid"
+    },
+    {
+      "shape": "circle",
+      "params": [
+        68.0,
+        9.0,
+        4.0
+      ],
+      "keepout_type": "solid"
+    }
+  ],
+  "target_volume_fraction": 0.4,
+  "youngs_modulus": 1.0,
+  "poissons_ratio": 0.3,
+  "penalty": 3.0,
+  "filter_radius": 1.8,
+  "max_stress_limit": 1.4,
+  "min_feature_radius": 1.5,
+  "min_wall_thickness": 1.8,
+  "max_cutouts": 24,
+  "description": "Design an 80x40 motorsport suspension rocker arm (<=40% volume fraction) connecting 3 solid mounting bosses across 2 independent load cases (vertical bump + lateral braking shear)."
+}
