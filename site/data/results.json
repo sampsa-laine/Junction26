@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-14T21:48:18+00:00",
+  "generated_at": "2026-11-14T23:50:56+00:00",
   "tasks": [
     {
       "task_id": "cantilever-lightweight",
@@ -14,14 +14,14 @@
         "source_kind": "in_repo_solver",
         "solver_name": "simp",
         "task_id": "cantilever-lightweight",
-        "harbor_reward": null,
+        "harbor_reward": 1.0,
         "arena_score": 100.0,
         "volume_fraction": 0.45,
         "max_stress": 0.8526,
         "compliance": 60.7449,
         "simp_gap": 0.0,
         "connected": true,
-        "passed": false,
+        "passed": true,
         "images": {
           "geometry": "assets/cantilever-lightweight_simp_geometry.png",
           "stress": "assets/cantilever-lightweight_simp_stress.png",
@@ -30,16 +30,16 @@
       },
       "oracle": {
         "id": "solver:oracle_solver:61043fb22652",
-        "label": "Oracle Solver (SIMP-to-CAD)",
+        "label": "Reference Solution",
         "source_kind": "in_repo_solver",
         "solver_name": "oracle_solver",
         "task_id": "cantilever-lightweight",
-        "harbor_reward": 0.9566,
-        "arena_score": 93.9,
-        "volume_fraction": 0.4401,
-        "max_stress": 0.9094,
-        "compliance": 64.4497,
-        "simp_gap": 6.1,
+        "harbor_reward": 0.9741,
+        "arena_score": 96.61,
+        "volume_fraction": 0.4506,
+        "max_stress": 0.8677,
+        "compliance": 62.8061,
+        "simp_gap": 3.39,
         "connected": true,
         "passed": true,
         "images": {
@@ -85,27 +85,21 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              58.7525,
-              5.7525,
-              36.65,
-              28.65,
-              34.7525,
-              28.7525,
-              34.7525,
-              30.2475,
-              60.2475,
-              30.2475,
-              60.2475,
-              5.7525,
-              1.27
+              60.28,
+              5.72,
+              34.72,
+              30.28,
+              60.28,
+              30.28,
+              1.65
             ],
-            "description": "Cut 6-gon pocket (fillet=1.3)",
+            "description": "Cut 3-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.8269,
-          "compliance": 38.2182,
-          "max_stress": 0.6485,
+          "volume_fraction": 0.8361,
+          "compliance": 37.3537,
+          "max_stress": 0.6304,
           "connected": true,
           "images": {
             "geometry": "assets/cantilever-lightweight_oracle_step_01_geometry.png",
@@ -119,37 +113,27 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              32.0,
-              10.65,
-              31.65,
-              12.65,
-              29.6766,
-              13.8661,
-              29.6567,
-              18.0683,
-              35.0683,
-              23.3433,
-              51.2475,
-              8.2475,
-              51.3433,
-              5.9317,
-              43.35,
-              4.65,
-              43.0683,
-              3.6567,
-              36.9317,
-              3.6567,
-              36.65,
-              5.65,
-              1.27
+              36.92,
+              3.61,
+              29.63,
+              13.85,
+              29.61,
+              18.08,
+              35.08,
+              23.39,
+              51.28,
+              8.28,
+              51.39,
+              5.92,
+              1.65
             ],
-            "description": "Cut 11-gon pocket (fillet=1.3)",
+            "description": "Cut 6-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.6983,
-          "compliance": 47.9847,
-          "max_stress": 0.6664,
+          "volume_fraction": 0.7047,
+          "compliance": 47.1694,
+          "max_stress": 0.6438,
           "connected": true,
           "images": {
             "geometry": "assets/cantilever-lightweight_oracle_step_02_geometry.png",
@@ -163,31 +147,25 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              2.65,
+              2.6,
               25.0,
-              5.1339,
-              25.3234,
-              15.1944,
-              20.291,
-              16.35,
-              18.35,
-              20.2475,
-              17.2475,
-              21.291,
-              14.8056,
-              5.1339,
-              5.6766,
-              2.8056,
-              5.709,
-              1.27
+              8.22,
+              24.33,
+              20.22,
+              17.33,
+              21.33,
+              14.78,
+              2.78,
+              5.67,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.3)",
+            "description": "Cut 5-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.5771,
-          "compliance": 55.4337,
-          "max_stress": 0.8788,
+          "volume_fraction": 0.5875,
+          "compliance": 54.0771,
+          "max_stress": 0.8501,
           "connected": true,
           "images": {
             "geometry": "assets/cantilever-lightweight_oracle_step_03_geometry.png",
@@ -202,30 +180,26 @@
             "action_type": "polygon",
             "params": [
               12.0,
-              2.65,
-              11.8056,
-              5.291,
-              21.65,
-              9.35,
-              22.8056,
-              11.291,
-              26.9317,
-              13.3433,
-              29.2475,
-              13.2475,
-              34.3433,
-              6.0683,
-              34.0683,
-              3.6567,
-              1.27
+              2.6,
+              11.78,
+              5.33,
+              26.92,
+              13.39,
+              29.28,
+              13.28,
+              34.39,
+              6.08,
+              34.08,
+              3.61,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.3)",
+            "description": "Cut 6-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.498,
-          "compliance": 60.3956,
-          "max_stress": 0.8997,
+          "volume_fraction": 0.504,
+          "compliance": 59.3932,
+          "max_stress": 0.8397,
           "connected": true,
           "images": {
             "geometry": "assets/cantilever-lightweight_oracle_step_04_geometry.png",
@@ -239,31 +213,25 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              18.0,
-              20.65,
-              14.65,
-              23.65,
-              12.7525,
-              23.7525,
-              12.7525,
-              25.2475,
+              25.15,
+              17.63,
+              12.72,
+              23.72,
+              12.72,
+              25.28,
               28.0,
-              25.35,
-              29.3234,
-              24.1339,
-              28.291,
-              20.8056,
-              25.1339,
-              17.6766,
-              1.27
+              25.4,
+              29.37,
+              24.15,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.3)",
+            "description": "Cut 5-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4566,
-          "compliance": 63.82,
-          "max_stress": 0.9051,
+          "volume_fraction": 0.4654,
+          "compliance": 62.5512,
+          "max_stress": 0.8659,
           "connected": true,
           "images": {
             "geometry": "assets/cantilever-lightweight_oracle_step_05_geometry.png",
@@ -277,31 +245,23 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              48.65,
-              1.35,
-              49.0,
-              2.35,
-              55.0683,
-              2.3433,
-              55.35,
-              1.35,
-              60.0683,
-              2.3433,
-              60.3433,
-              -0.0683,
-              43.6567,
-              -0.0683,
-              43.9317,
-              1.3433,
-              1.27
+              43.85,
+              1.37,
+              60.08,
+              2.39,
+              60.39,
+              -0.08,
+              43.63,
+              -0.15,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.3)",
+            "description": "Cut 4-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4409,
-          "compliance": 64.4497,
-          "max_stress": 0.9094,
+          "volume_fraction": 0.4507,
+          "compliance": 62.8061,
+          "max_stress": 0.8677,
           "connected": true,
           "images": {
             "geometry": "assets/cantilever-lightweight_oracle_step_06_geometry.png",
@@ -324,14 +284,14 @@
         "source_kind": "in_repo_solver",
         "solver_name": "simp",
         "task_id": "l-bracket-stress",
-        "harbor_reward": null,
+        "harbor_reward": 1.0,
         "arena_score": 100.0,
         "volume_fraction": 0.36,
         "max_stress": 1.5253,
         "compliance": 116.3001,
         "simp_gap": 0.0,
         "connected": true,
-        "passed": false,
+        "passed": true,
         "images": {
           "geometry": "assets/l-bracket-stress_simp_geometry.png",
           "stress": "assets/l-bracket-stress_simp_stress.png",
@@ -340,16 +300,16 @@
       },
       "oracle": {
         "id": "solver:oracle_solver:dd431384dab7",
-        "label": "Oracle Solver (SIMP-to-CAD)",
+        "label": "Reference Solution",
         "source_kind": "in_repo_solver",
         "solver_name": "oracle_solver",
         "task_id": "l-bracket-stress",
-        "harbor_reward": 0.9779,
-        "arena_score": 96.98,
-        "volume_fraction": 0.3576,
-        "max_stress": 1.5192,
-        "compliance": 119.81,
-        "simp_gap": 3.02,
+        "harbor_reward": 0.975,
+        "arena_score": 96.57,
+        "volume_fraction": 0.3597,
+        "max_stress": 1.5223,
+        "compliance": 120.2944,
+        "simp_gap": 3.43,
         "connected": true,
         "passed": true,
         "images": {
@@ -377,7 +337,7 @@
       "oracle_replay": [
         {
           "step": 0,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": null,
           "volume_fraction": 0.64,
           "compliance": 91.0782,
@@ -391,33 +351,29 @@
         },
         {
           "step": 1,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": {
             "action_type": "polygon",
             "params": [
-              4.65,
-              41.65,
-              3.6567,
-              41.9317,
-              3.8056,
-              47.291,
-              14.291,
-              47.1944,
-              14.3433,
-              22.9317,
-              9.0683,
-              18.6567,
-              4.6567,
-              18.9317,
-              1.27
+              4.61,
+              18.92,
+              3.78,
+              47.33,
+              14.33,
+              47.22,
+              14.39,
+              22.92,
+              9.08,
+              18.61,
+              1.65
             ],
-            "description": "Cut 7-gon pocket (fillet=1.3)",
+            "description": "Cut 5-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.5327,
-          "compliance": 101.2352,
-          "max_stress": 1.3539,
+          "volume_fraction": 0.529,
+          "compliance": 101.8104,
+          "max_stress": 1.3426,
           "connected": true,
           "images": {
             "geometry": "assets/l-bracket-stress_oracle_step_01_geometry.png",
@@ -427,39 +383,35 @@
         },
         {
           "step": 2,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": {
             "action_type": "polygon",
             "params": [
-              35.7525,
-              1.2475,
-              44.8661,
-              7.3234,
-              47.65,
-              7.35,
-              48.65,
-              11.65,
-              29.8661,
-              17.6766,
-              27.7525,
-              18.7525,
-              27.709,
-              20.1944,
-              50.1944,
-              20.291,
-              50.291,
-              -0.1944,
-              35.7525,
-              -0.2475,
-              1.27
+              35.72,
+              -0.28,
+              44.85,
+              7.37,
+              47.6,
+              7.4,
+              48.6,
+              11.6,
+              29.85,
+              17.63,
+              27.67,
+              20.22,
+              50.22,
+              20.33,
+              50.33,
+              -0.22,
+              1.65
             ],
-            "description": "Cut 10-gon pocket (fillet=1.3)",
+            "description": "Cut 8-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4572,
-          "compliance": 106.7894,
-          "max_stress": 1.3516,
+          "volume_fraction": 0.4591,
+          "compliance": 106.6011,
+          "max_stress": 1.3413,
           "connected": true,
           "images": {
             "geometry": "assets/l-bracket-stress_oracle_step_02_geometry.png",
@@ -469,29 +421,29 @@
         },
         {
           "step": 3,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": {
             "action_type": "polygon",
             "params": [
-              35.0683,
-              4.6567,
-              24.709,
-              14.8056,
-              24.8056,
-              16.291,
-              40.3433,
-              11.0683,
-              40.2475,
-              8.7525,
-              1.27
+              18.78,
+              3.67,
+              18.72,
+              15.28,
+              21.22,
+              15.33,
+              28.33,
+              7.22,
+              28.33,
+              4.78,
+              1.65
             ],
-            "description": "Cut 5-gon pocket (fillet=1.3)",
+            "description": "Cut 5-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4276,
-          "compliance": 110.8144,
-          "max_stress": 1.3501,
+          "volume_fraction": 0.4288,
+          "compliance": 110.614,
+          "max_stress": 1.4124,
           "connected": true,
           "images": {
             "geometry": "assets/l-bracket-stress_oracle_step_03_geometry.png",
@@ -501,35 +453,29 @@
         },
         {
           "step": 4,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": {
             "action_type": "polygon",
             "params": [
-              18.0,
-              4.65,
-              18.6567,
-              15.0683,
-              21.0683,
-              15.3433,
-              22.35,
-              12.35,
-              28.291,
-              7.1944,
-              28.3433,
-              4.9317,
-              24.35,
-              4.65,
-              24.0,
-              3.65,
-              1.27
+              29.0,
+              9.6,
+              24.78,
+              16.33,
+              40.39,
+              11.08,
+              40.28,
+              8.72,
+              35.08,
+              4.61,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.3)",
+            "description": "Cut 5-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.3986,
-          "compliance": 114.0902,
-          "max_stress": 1.4249,
+          "volume_fraction": 0.3987,
+          "compliance": 114.8905,
+          "max_stress": 1.4607,
           "connected": true,
           "images": {
             "geometry": "assets/l-bracket-stress_oracle_step_04_geometry.png",
@@ -539,33 +485,27 @@
         },
         {
           "step": 5,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": {
             "action_type": "polygon",
             "params": [
-              -0.35,
+              -0.4,
               11.0,
-              1.2475,
-              11.2475,
-              1.35,
-              9.35,
-              9.35,
-              1.35,
-              11.2475,
-              1.2475,
-              11.2475,
-              -0.2475,
-              -0.2475,
-              -0.2475,
-              1.27
+              1.28,
+              11.28,
+              11.28,
+              -0.28,
+              -0.28,
+              -0.28,
+              1.65
             ],
-            "description": "Cut 7-gon pocket (fillet=1.3)",
+            "description": "Cut 4-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.3768,
-          "compliance": 116.2152,
-          "max_stress": 1.4478,
+          "volume_fraction": 0.3725,
+          "compliance": 118.2395,
+          "max_stress": 1.4945,
           "connected": true,
           "images": {
             "geometry": "assets/l-bracket-stress_oracle_step_05_geometry.png",
@@ -575,58 +515,32 @@
         },
         {
           "step": 6,
-          "total_steps": 7,
+          "total_steps": 6,
           "action": {
             "action_type": "polygon",
             "params": [
-              12.0683,
-              7.6567,
-              7.709,
-              12.1944,
-              11.8056,
-              16.291,
-              15.1944,
-              17.291,
-              14.291,
-              9.8056,
-              1.27
+              10.0,
+              8.6,
+              7.67,
+              12.22,
+              15.22,
+              17.33,
+              13.33,
+              7.78,
+              1.65
             ],
-            "description": "Cut 5-gon pocket (fillet=1.3)",
+            "description": "Cut 4-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.3613,
-          "compliance": 119.0727,
-          "max_stress": 1.5087,
+          "volume_fraction": 0.3599,
+          "compliance": 120.2944,
+          "max_stress": 1.5223,
           "connected": true,
           "images": {
             "geometry": "assets/l-bracket-stress_oracle_step_06_geometry.png",
             "stress": "assets/l-bracket-stress_oracle_step_06_stress.png",
             "strain": "assets/l-bracket-stress_oracle_step_06_strain.png"
-          }
-        },
-        {
-          "step": 7,
-          "total_steps": 7,
-          "action": {
-            "action_type": "circle",
-            "params": [
-              10.5,
-              0.5,
-              1.85
-            ],
-            "description": "Cut circle at (10.5, 0.5) r=1.9",
-            "mirror_x": false,
-            "mirror_y": false
-          },
-          "volume_fraction": 0.3586,
-          "compliance": 119.81,
-          "max_stress": 1.5192,
-          "connected": true,
-          "images": {
-            "geometry": "assets/l-bracket-stress_oracle_step_07_geometry.png",
-            "stress": "assets/l-bracket-stress_oracle_step_07_stress.png",
-            "strain": "assets/l-bracket-stress_oracle_step_07_strain.png"
           }
         }
       ]
@@ -644,14 +558,14 @@
         "source_kind": "in_repo_solver",
         "solver_name": "simp",
         "task_id": "suspension-rocker-multiload",
-        "harbor_reward": null,
+        "harbor_reward": 1.0,
         "arena_score": 100.0,
         "volume_fraction": 0.4,
         "max_stress": 0.8728,
         "compliance": 136.0813,
         "simp_gap": 0.0,
         "connected": true,
-        "passed": false,
+        "passed": true,
         "images": {
           "geometry": "assets/suspension-rocker-multiload_simp_geometry.png",
           "stress": "assets/suspension-rocker-multiload_simp_stress.png",
@@ -660,16 +574,16 @@
       },
       "oracle": {
         "id": "solver:oracle_solver:4be91693fec5",
-        "label": "Oracle Solver (SIMP-to-CAD)",
+        "label": "Reference Solution",
         "source_kind": "in_repo_solver",
         "solver_name": "oracle_solver",
         "task_id": "suspension-rocker-multiload",
-        "harbor_reward": 0.9389,
-        "arena_score": 91.23,
-        "volume_fraction": 0.3957,
-        "max_stress": 0.8995,
-        "compliance": 148.0151,
-        "simp_gap": 8.77,
+        "harbor_reward": 0.94,
+        "arena_score": 91.82,
+        "volume_fraction": 0.4019,
+        "max_stress": 0.89,
+        "compliance": 147.2164,
+        "simp_gap": 8.18,
         "connected": true,
         "passed": true,
         "images": {
@@ -715,61 +629,31 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              45.8125,
-              1.6875,
-              47.2569,
-              4.1138,
-              52.0625,
-              4.1875,
-              52.4146,
-              5.4291,
-              62.0625,
-              5.4375,
-              62.5,
-              6.6875,
-              69.5625,
-              5.4375,
-              72.0625,
-              7.9375,
-              69.5709,
-              12.4146,
-              69.5625,
-              19.5625,
-              68.3125,
-              20.0,
-              68.3458,
-              27.6674,
-              70.8125,
-              27.9375,
-              72.0625,
-              32.0625,
-              69.5625,
-              34.5625,
-              64.9146,
-              33.3209,
-              50.8125,
-              38.3125,
-              46.0826,
-              38.3458,
-              45.9406,
-              40.3094,
-              80.3094,
-              40.3094,
-              80.3094,
-              -0.3094,
-              42.0958,
-              -0.1674,
-              42.3326,
-              1.6542,
-              1.35
+              41.95,
+              -0.81,
+              47.25,
+              4.53,
+              71.58,
+              8.25,
+              67.92,
+              18.74,
+              71.62,
+              31.79,
+              45.32,
+              40.66,
+              80.66,
+              40.66,
+              80.66,
+              -0.66,
+              1.65
             ],
-            "description": "Cut 23-gon pocket (fillet=1.4)",
+            "description": "Cut 8-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.8116,
-          "compliance": 80.6214,
-          "max_stress": 0.777,
+          "volume_fraction": 0.8107,
+          "compliance": 80.2612,
+          "max_stress": 0.7773,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_01_geometry.png",
@@ -783,31 +667,27 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              42.1906,
-              9.6906,
-              34.5709,
-              21.3354,
-              42.2569,
-              37.8638,
-              62.8638,
-              32.7431,
-              62.9042,
-              29.8326,
-              59.1875,
-              27.0625,
-              59.1138,
-              24.7569,
-              45.2431,
-              9.6362,
-              1.35
+              42.15,
+              9.65,
+              34.51,
+              22.6,
+              42.22,
+              37.92,
+              62.92,
+              32.78,
+              59.17,
+              24.72,
+              45.28,
+              9.58,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.4)",
+            "description": "Cut 6-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.6674,
-          "compliance": 108.3326,
-          "max_stress": 0.7687,
+          "volume_fraction": 0.6657,
+          "compliance": 108.1762,
+          "max_stress": 0.7692,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_02_geometry.png",
@@ -821,41 +701,29 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              -0.4375,
+              -0.5,
               40.0,
-              19.1542,
-              40.1674,
-              17.7431,
-              37.1362,
-              15.4375,
-              37.0625,
-              12.7431,
-              33.3862,
-              9.1875,
-              32.0625,
-              6.6542,
-              21.0826,
-              4.1875,
-              18.3125,
-              6.6875,
-              7.9375,
-              14.1875,
-              1.6875,
-              16.5594,
-              1.5594,
-              16.4174,
-              -0.4042,
-              -0.4042,
-              -0.1674,
-              1.35
+              19.21,
+              40.19,
+              10.5,
+              33.25,
+              4.25,
+              18.25,
+              6.75,
+              8.0,
+              16.44,
+              -0.46,
+              -0.46,
+              -0.19,
+              1.65
             ],
-            "description": "Cut 13-gon pocket (fillet=1.4)",
+            "description": "Cut 7-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.5528,
-          "compliance": 120.3664,
-          "max_stress": 0.8805,
+          "volume_fraction": 0.5562,
+          "compliance": 119.1493,
+          "max_stress": 0.8719,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_03_geometry.png",
@@ -869,23 +737,23 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              22.0625,
-              37.5,
-              40.3638,
-              37.7431,
-              33.9931,
-              22.1362,
-              22.1362,
-              28.5069,
-              1.35
+              22.5,
+              28.25,
+              22.31,
+              37.96,
+              40.46,
+              37.69,
+              33.94,
+              22.04,
+              1.65
             ],
-            "description": "Cut 4-gon pocket (fillet=1.4)",
+            "description": "Cut 4-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4924,
-          "compliance": 126.38,
-          "max_stress": 0.8616,
+          "volume_fraction": 0.4953,
+          "compliance": 125.7285,
+          "max_stress": 0.8532,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_04_geometry.png",
@@ -899,31 +767,25 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              51.25,
-              8.3125,
-              50.8862,
-              10.2431,
-              55.8125,
-              14.1875,
-              55.9406,
-              16.5594,
-              63.5069,
-              24.1138,
-              65.3094,
-              24.0594,
-              66.5594,
-              12.1906,
-              62.5854,
-              8.3209,
-              1.35
+              51.06,
+              8.29,
+              55.9,
+              16.6,
+              65.35,
+              24.1,
+              66.6,
+              12.15,
+              62.6,
+              8.26,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.4)",
+            "description": "Cut 5-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4484,
-          "compliance": 134.0098,
-          "max_stress": 0.8617,
+          "volume_fraction": 0.4538,
+          "compliance": 133.7094,
+          "max_stress": 0.8533,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_05_geometry.png",
@@ -938,30 +800,26 @@
             "action_type": "polygon",
             "params": [
               25.0,
-              4.5625,
-              23.3209,
-              6.1646,
-              23.4406,
-              11.5594,
-              28.5826,
-              15.4042,
-              34.0594,
-              15.3094,
-              34.1875,
-              12.9375,
-              36.6791,
-              11.3354,
-              36.5594,
-              5.9406,
-              1.35
+              4.5,
+              23.4,
+              11.6,
+              28.56,
+              15.46,
+              34.1,
+              15.35,
+              36.74,
+              11.35,
+              36.6,
+              5.9,
+              1.65
             ],
-            "description": "Cut 8-gon pocket (fillet=1.4)",
+            "description": "Cut 6-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4125,
-          "compliance": 143.6582,
-          "max_stress": 0.8975,
+          "volume_fraction": 0.4179,
+          "compliance": 143.6934,
+          "max_stress": 0.8892,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_06_geometry.png",
@@ -975,25 +833,23 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              15.0,
-              29.5625,
-              13.3862,
-              32.7431,
-              20.2431,
-              36.6138,
-              21.6791,
-              35.0854,
-              21.6138,
-              29.7569,
-              1.35
+              13.56,
+              29.54,
+              18.56,
+              36.71,
+              21.71,
+              36.44,
+              21.44,
+              29.54,
+              1.65
             ],
-            "description": "Cut 5-gon pocket (fillet=1.4)",
+            "description": "Cut 4-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.4001,
-          "compliance": 147.054,
-          "max_stress": 0.9,
+          "volume_fraction": 0.4068,
+          "compliance": 146.0086,
+          "max_stress": 0.8908,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_07_geometry.png",
@@ -1007,28 +863,376 @@
           "action": {
             "action_type": "polygon",
             "params": [
-              25.0,
-              15.8125,
-              23.3862,
-              18.9931,
-              27.7431,
-              20.3638,
-              29.1138,
-              17.2569,
-              1.35
+              23.25,
+              18.75,
+              27.6,
+              20.49,
+              29.24,
+              17.4,
+              23.65,
+              15.76,
+              1.65
             ],
-            "description": "Cut 4-gon pocket (fillet=1.4)",
+            "description": "Cut 4-gon pocket (fillet=1.6)",
             "mirror_x": false,
             "mirror_y": false
           },
-          "volume_fraction": 0.3958,
-          "compliance": 148.0151,
-          "max_stress": 0.8995,
+          "volume_fraction": 0.4015,
+          "compliance": 147.2164,
+          "max_stress": 0.89,
           "connected": true,
           "images": {
             "geometry": "assets/suspension-rocker-multiload_oracle_step_08_geometry.png",
             "stress": "assets/suspension-rocker-multiload_oracle_step_08_stress.png",
             "strain": "assets/suspension-rocker-multiload_oracle_step_08_strain.png"
+          }
+        }
+      ]
+    },
+    {
+      "task_id": "aerospace-rib-obstacles",
+      "title": "Aerospace Rib Obstacles (80x40)",
+      "grid": "64x32",
+      "target_volume": 0.35,
+      "max_stress": 2.05,
+      "load_cases": 3,
+      "simp": {
+        "id": "solver:simp:78286be39838",
+        "label": "SIMP Topology Optimum (Continuous)",
+        "source_kind": "in_repo_solver",
+        "solver_name": "simp",
+        "task_id": "aerospace-rib-obstacles",
+        "harbor_reward": 1.0,
+        "arena_score": 100.0,
+        "volume_fraction": 0.35,
+        "max_stress": 1.5433,
+        "compliance": 534.1872,
+        "simp_gap": 0.0,
+        "connected": true,
+        "passed": true,
+        "images": {
+          "geometry": "assets/aerospace-rib-obstacles_simp_geometry.png",
+          "stress": "assets/aerospace-rib-obstacles_simp_stress.png",
+          "strain": "assets/aerospace-rib-obstacles_simp_strain.png"
+        }
+      },
+      "oracle": {
+        "id": "solver:oracle_solver:78286be39838",
+        "label": "Reference Solution",
+        "source_kind": "in_repo_solver",
+        "solver_name": "oracle_solver",
+        "task_id": "aerospace-rib-obstacles",
+        "harbor_reward": 0.8546,
+        "arena_score": 76.94,
+        "volume_fraction": 0.3492,
+        "max_stress": 1.9941,
+        "compliance": 657.3668,
+        "simp_gap": 23.06,
+        "connected": true,
+        "passed": true,
+        "images": {
+          "geometry": "assets/aerospace-rib-obstacles_oracle_geometry.png",
+          "stress": "assets/aerospace-rib-obstacles_oracle_stress.png",
+          "strain": "assets/aerospace-rib-obstacles_oracle_strain.png"
+        }
+      },
+      "do_nothing": {
+        "id": "human:78286be39838",
+        "label": "Do-Nothing Baseline (Uncut)",
+        "source_kind": "human",
+        "solver_name": "human",
+        "task_id": "aerospace-rib-obstacles",
+        "harbor_reward": 0.0,
+        "arena_score": 0.0,
+        "volume_fraction": 0.9689,
+        "max_stress": 0.6786,
+        "compliance": 209.6302,
+        "simp_gap": 0.0,
+        "connected": true,
+        "passed": false,
+        "images": {}
+      },
+      "oracle_replay": [
+        {
+          "step": 0,
+          "total_steps": 8,
+          "action": null,
+          "volume_fraction": 0.9686,
+          "compliance": 209.6302,
+          "max_stress": 0.6786,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_00_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_00_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_00_strain.png"
+          }
+        },
+        {
+          "step": 1,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              52.08,
+              -0.28,
+              77.0,
+              5.5,
+              73.25,
+              12.5,
+              77.0,
+              34.5,
+              47.4,
+              35.76,
+              37.08,
+              40.28,
+              80.28,
+              40.42,
+              80.42,
+              -0.28,
+              1.65
+            ],
+            "description": "Cut 8-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.8588,
+          "compliance": 222.4619,
+          "max_stress": 0.7092,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_01_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_01_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_01_strain.png"
+          }
+        },
+        {
+          "step": 2,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              46.8,
+              4.16,
+              39.13,
+              23.98,
+              50.18,
+              30.91,
+              54.62,
+              25.03,
+              51.12,
+              18.5,
+              59.15,
+              20.78,
+              69.82,
+              7.17,
+              1.65
+            ],
+            "description": "Cut 7-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.7383,
+          "compliance": 330.9341,
+          "max_stress": 0.9342,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_02_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_02_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_02_strain.png"
+          }
+        },
+        {
+          "step": 3,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              2.0,
+              35.0,
+              5.28,
+              35.42,
+              20.49,
+              21.35,
+              20.35,
+              18.4,
+              5.1,
+              4.51,
+              2.01,
+              4.9,
+              1.65
+            ],
+            "description": "Cut 6-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6369,
+          "compliance": 386.1784,
+          "max_stress": 1.4739,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_03_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_03_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_03_strain.png"
+          }
+        },
+        {
+          "step": 4,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              71.6,
+              12.15,
+              50.83,
+              32.22,
+              50.97,
+              35.42,
+              70.35,
+              32.85,
+              73.0,
+              28.75,
+              1.65
+            ],
+            "description": "Cut 5-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5589,
+          "compliance": 434.5502,
+          "max_stress": 1.5427,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_04_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_04_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_04_strain.png"
+          }
+        },
+        {
+          "step": 5,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              15.51,
+              4.49,
+              30.54,
+              10.75,
+              37.54,
+              21.11,
+              45.86,
+              4.99,
+              43.93,
+              1.69,
+              14.34,
+              1.73,
+              1.65
+            ],
+            "description": "Cut 6-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4724,
+          "compliance": 510.9559,
+          "max_stress": 1.5345,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_05_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_05_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_05_strain.png"
+          }
+        },
+        {
+          "step": 6,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              19.65,
+              23.4,
+              8.47,
+              36.67,
+              30.49,
+              35.1,
+              23.85,
+              22.01,
+              1.65
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4211,
+          "compliance": 564.9781,
+          "max_stress": 1.6257,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_06_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_06_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_06_strain.png"
+          }
+        },
+        {
+          "step": 7,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              27.06,
+              23.06,
+              33.41,
+              35.86,
+              43.44,
+              31.57,
+              35.31,
+              20.42,
+              1.65
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3836,
+          "compliance": 598.5502,
+          "max_stress": 1.6148,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_07_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_07_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_07_strain.png"
+          }
+        },
+        {
+          "step": 8,
+          "total_steps": 8,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              8.4,
+              4.65,
+              21.06,
+              17.96,
+              24.03,
+              17.92,
+              27.96,
+              13.94,
+              26.53,
+              10.83,
+              11.44,
+              4.54,
+              1.65
+            ],
+            "description": "Cut 6-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3507,
+          "compliance": 657.3668,
+          "max_stress": 1.9941,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_oracle_step_08_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_oracle_step_08_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_oracle_step_08_strain.png"
           }
         }
       ]
@@ -2420,6 +2624,1058 @@
       "arena_score": 65.1,
       "volume_fraction": 0.4484,
       "max_stress": 0.9668
+    },
+    {
+      "trial": "2026-11-14__19-51-40/aerospace-rib-obstacles__KYLyKct",
+      "agent": "opencode (gemini/gemini-4-hydrogen)",
+      "task_id": "aerospace-rib-obstacles",
+      "harbor_reward": 0.7582,
+      "status": "completed",
+      "images": {
+        "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_geometry.png",
+        "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_stress.png",
+        "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_strain.png"
+      },
+      "replay": [
+        {
+          "step": 0,
+          "total_steps": 12,
+          "action": null,
+          "volume_fraction": 0.9686,
+          "compliance": 209.6302,
+          "max_stress": 0.6786,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_00_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_00_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_00_strain.png"
+          }
+        },
+        {
+          "step": 1,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              2.0,
+              36.95,
+              2.0,
+              3.05,
+              18.75,
+              20.0,
+              1.55
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.8908,
+          "compliance": 242.9457,
+          "max_stress": 1.1683,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_01_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_01_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_01_strain.png"
+          }
+        },
+        {
+          "step": 2,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              5.2,
+              36.7,
+              34.7,
+              37.05,
+              19.75,
+              21.2,
+              1.55
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.8205,
+          "compliance": 367.5953,
+          "max_stress": 1.3634,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_02_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_02_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_02_strain.png"
+          }
+        },
+        {
+          "step": 3,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              5.2,
+              3.3,
+              34.7,
+              2.95,
+              19.75,
+              18.8,
+              1.55
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.7502,
+          "compliance": 505.7954,
+          "max_stress": 1.4232,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_03_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_03_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_03_strain.png"
+          }
+        },
+        {
+          "step": 4,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              20.8,
+              20.0,
+              36.9,
+              36.6,
+              38.9,
+              34.1,
+              35.7,
+              2.8,
+              1.55
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6742,
+          "compliance": 559.531,
+          "max_stress": 1.4903,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_04_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_04_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_04_strain.png"
+          }
+        },
+        {
+          "step": 5,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              40.4,
+              31.6,
+              43.6,
+              31.6,
+              48.8,
+              2.5,
+              37.3,
+              2.5,
+              1.55
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6081,
+          "compliance": 638.4568,
+          "max_stress": 1.4168,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_05_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_05_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_05_strain.png"
+          }
+        },
+        {
+          "step": 6,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              45.1,
+              34.7,
+              57.7,
+              20.0,
+              50.4,
+              3.2,
+              1.55
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5753,
+          "compliance": 657.8002,
+          "max_stress": 1.4064,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_06_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_06_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_06_strain.png"
+          }
+        },
+        {
+          "step": 7,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              48.1,
+              35.7,
+              60.2,
+              21.8,
+              71.3,
+              30.5,
+              70.6,
+              34.3,
+              1.55
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5236,
+          "compliance": 689.1919,
+          "max_stress": 1.3982,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_07_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_07_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_07_strain.png"
+          }
+        },
+        {
+          "step": 8,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              52.1,
+              3.1,
+              60.2,
+              18.2,
+              71.3,
+              9.5,
+              70.6,
+              5.8,
+              1.55
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.478,
+          "compliance": 725.5776,
+          "max_stress": 1.4024,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_08_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_08_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_08_strain.png"
+          }
+        },
+        {
+          "step": 9,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              62.3,
+              20.0,
+              73.8,
+              29.2,
+              73.8,
+              10.8,
+              1.55
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4466,
+          "compliance": 739.9292,
+          "max_stress": 1.4034,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_09_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_09_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_09_strain.png"
+          }
+        },
+        {
+          "step": 10,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              39.0,
+              41.0,
+              42.5,
+              38.2,
+              74.2,
+              35.1,
+              81.0,
+              35.1,
+              81.0,
+              41.0,
+              1.52
+            ],
+            "description": "Cut 5-gon pocket (fillet=1.5)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4061,
+          "compliance": 754.0667,
+          "max_stress": 1.4064,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_10_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_10_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_10_strain.png"
+          }
+        },
+        {
+          "step": 11,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              47.5,
+              -1.0,
+              81.0,
+              -1.0,
+              81.0,
+              5.5,
+              78.0,
+              5.5,
+              74.0,
+              4.5,
+              48.5,
+              0.4,
+              1.52
+            ],
+            "description": "Cut 6-gon pocket (fillet=1.5)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3807,
+          "compliance": 761.8805,
+          "max_stress": 1.4036,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_11_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_11_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_11_strain.png"
+          }
+        },
+        {
+          "step": 12,
+          "total_steps": 12,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              75.6,
+              28.5,
+              77.6,
+              31.0,
+              77.6,
+              36.2,
+              81.0,
+              36.2,
+              81.0,
+              3.8,
+              77.6,
+              3.8,
+              77.6,
+              9.0,
+              75.6,
+              11.5,
+              1.52
+            ],
+            "description": "Cut 8-gon pocket (fillet=1.5)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3477,
+          "compliance": 772.6221,
+          "max_stress": 1.4038,
+          "connected": true,
+          "images": {
+            "geometry": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_12_geometry.png",
+            "stress": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_12_stress.png",
+            "strain": "assets/aerospace-rib-obstacles_aerospace-rib-obstacles__KYLyKct_step_12_strain.png"
+          }
+        }
+      ],
+      "arena_score": 55.36,
+      "volume_fraction": 0.3449,
+      "max_stress": 1.4038
+    },
+    {
+      "trial": "2026-11-14__21-16-54/suspension-rocker-multiload__BePXtmx",
+      "agent": "opencode (gemini/gemini-4-hydrogen)",
+      "task_id": "suspension-rocker-multiload",
+      "harbor_reward": 0.7771,
+      "status": "completed",
+      "images": {
+        "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_geometry.png",
+        "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_stress.png",
+        "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_strain.png"
+      },
+      "replay": [
+        {
+          "step": 0,
+          "total_steps": 7,
+          "action": null,
+          "volume_fraction": 1.0,
+          "compliance": 76.4376,
+          "max_stress": 0.7761,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_00_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_00_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_00_strain.png"
+          }
+        },
+        {
+          "step": 1,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              -2.0,
+              42.0,
+              82.0,
+              42.0,
+              82.0,
+              34.7,
+              68.0,
+              34.7,
+              25.0,
+              36.7,
+              14.0,
+              32.5,
+              5.1,
+              25.0,
+              -2.0,
+              25.0,
+              2.0
+            ],
+            "description": "Cut 8-gon pocket (fillet=2.0)",
+            "mirror_x": false,
+            "mirror_y": true
+          },
+          "volume_fraction": 0.6976,
+          "compliance": 108.9618,
+          "max_stress": 0.9263,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_01_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_01_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_01_strain.png"
+          }
+        },
+        {
+          "step": 2,
+          "total_steps": 7,
+          "action": {
+            "action_type": "rect",
+            "params": [
+              -2.0,
+              -2.0,
+              7.2,
+              44.0,
+              1.5
+            ],
+            "description": "Cut rect at (-2.0, -2.0) 7.2x44.0 r=1.5",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6813,
+          "compliance": 109.133,
+          "max_stress": 0.9287,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_02_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_02_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_02_strain.png"
+          }
+        },
+        {
+          "step": 3,
+          "total_steps": 7,
+          "action": {
+            "action_type": "rect",
+            "params": [
+              72.0,
+              -2.0,
+              10.0,
+              44.0,
+              1.5
+            ],
+            "description": "Cut rect at (72.0, -2.0) 10.0x44.0 r=1.5",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6078,
+          "compliance": 109.3552,
+          "max_stress": 0.9287,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_03_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_03_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_03_strain.png"
+          }
+        },
+        {
+          "step": 4,
+          "total_steps": 7,
+          "action": {
+            "action_type": "rect",
+            "params": [
+              69.0,
+              13.5,
+              6.0,
+              13.0,
+              2.0
+            ],
+            "description": "Cut rect at (69.0, 13.5) 6.0x13.0 r=2.0",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5961,
+          "compliance": 110.1639,
+          "max_stress": 0.9287,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_04_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_04_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_04_strain.png"
+          }
+        },
+        {
+          "step": 5,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              23.5,
+              20.0,
+              34.8,
+              33.5,
+              41.4,
+              7.0,
+              1.8
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5381,
+          "compliance": 135.7386,
+          "max_stress": 0.9144,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_05_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_05_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_05_strain.png"
+          }
+        },
+        {
+          "step": 6,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              38.0,
+              33.7,
+              60.8,
+              33.0,
+              45.5,
+              7.2,
+              1.8
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4468,
+          "compliance": 171.4471,
+          "max_stress": 0.9173,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_06_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_06_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_06_strain.png"
+          }
+        },
+        {
+          "step": 7,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              49.6,
+              7.3,
+              63.8,
+              29.5,
+              65.7,
+              26.0,
+              65.7,
+              14.0,
+              63.8,
+              10.5,
+              1.8
+            ],
+            "description": "Cut 5-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3974,
+          "compliance": 190.4569,
+          "max_stress": 0.919,
+          "connected": true,
+          "images": {
+            "geometry": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_07_geometry.png",
+            "stress": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_07_stress.png",
+            "strain": "assets/suspension-rocker-multiload_suspension-rocker-multiload__BePXtmx_step_07_strain.png"
+          }
+        }
+      ],
+      "arena_score": 60.04,
+      "volume_fraction": 0.3982,
+      "max_stress": 0.919
+    },
+    {
+      "trial": "2026-11-14__21-37-44/l-bracket-stress__T2wopJT",
+      "agent": "opencode (gemini/gemini-4-hydrogen)",
+      "task_id": "l-bracket-stress",
+      "harbor_reward": 0.9494,
+      "status": "completed",
+      "images": {
+        "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_geometry.png",
+        "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_stress.png",
+        "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_strain.png"
+      },
+      "replay": [
+        {
+          "step": 0,
+          "total_steps": 7,
+          "action": null,
+          "volume_fraction": 0.64,
+          "compliance": 91.0782,
+          "max_stress": 1.3999,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_00_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_00_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_00_strain.png"
+          }
+        },
+        {
+          "step": 1,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              -5.0,
+              -5.0,
+              18.3,
+              -5.0,
+              -5.0,
+              18.3,
+              2.0
+            ],
+            "description": "Cut 3-gon pocket (fillet=2.0)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6046,
+          "compliance": 93.7314,
+          "max_stress": 1.4883,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_01_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_01_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_01_strain.png"
+          }
+        },
+        {
+          "step": 2,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              23.6,
+              21.0,
+              55.0,
+              21.0,
+              55.0,
+              8.0,
+              48.9,
+              8.0,
+              48.9,
+              11.6,
+              2.0
+            ],
+            "description": "Cut 5-gon pocket (fillet=2.0)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5654,
+          "compliance": 95.4126,
+          "max_stress": 1.4892,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_02_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_02_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_02_strain.png"
+          }
+        },
+        {
+          "step": 3,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              22.0,
+              -2.0,
+              55.0,
+              -2.0,
+              55.0,
+              16.0,
+              48.9,
+              16.0,
+              48.9,
+              7.9,
+              2.0
+            ],
+            "description": "Cut 5-gon pocket (fillet=2.0)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5289,
+          "compliance": 98.9082,
+          "max_stress": 1.489,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_03_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_03_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_03_strain.png"
+          }
+        },
+        {
+          "step": 4,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              4.1,
+              19.5,
+              14.4,
+              24.0,
+              15.6,
+              29.0,
+              15.6,
+              48.2,
+              4.1,
+              48.2,
+              2.0
+            ],
+            "description": "Cut 5-gon pocket (fillet=2.0)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4138,
+          "compliance": 114.6527,
+          "max_stress": 1.5231,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_04_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_04_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_04_strain.png"
+          }
+        },
+        {
+          "step": 5,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              21.8,
+              3.6,
+              33.2,
+              6.8,
+              21.8,
+              15.4,
+              1.8
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3897,
+          "compliance": 118.8725,
+          "max_stress": 1.5437,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_05_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_05_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_05_strain.png"
+          }
+        },
+        {
+          "step": 6,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              23.3,
+              15.4,
+              34.5,
+              7.1,
+              42.5,
+              9.1,
+              42.5,
+              11.5,
+              1.8
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3683,
+          "compliance": 122.8252,
+          "max_stress": 1.5702,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_06_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_06_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_06_strain.png"
+          }
+        },
+        {
+          "step": 7,
+          "total_steps": 7,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              5.8,
+              15.6,
+              15.3,
+              13.1,
+              15.3,
+              5.8,
+              1.8
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.3592,
+          "compliance": 124.6443,
+          "max_stress": 1.6334,
+          "connected": true,
+          "images": {
+            "geometry": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_07_geometry.png",
+            "stress": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_07_stress.png",
+            "strain": "assets/l-bracket-stress_l-bracket-stress__T2wopJT_step_07_strain.png"
+          }
+        }
+      ],
+      "arena_score": 92.83,
+      "volume_fraction": 0.3575,
+      "max_stress": 1.6334
+    },
+    {
+      "trial": "2026-11-14__21-46-43/cantilever-lightweight__GaCMd7P",
+      "agent": "opencode (gemini/gemini-4-hydrogen)",
+      "task_id": "cantilever-lightweight",
+      "harbor_reward": 0.8882,
+      "status": "completed",
+      "images": {
+        "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_geometry.png",
+        "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_stress.png",
+        "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_strain.png"
+      },
+      "replay": [
+        {
+          "step": 0,
+          "total_steps": 5,
+          "action": null,
+          "volume_fraction": 1.0,
+          "compliance": 32.9879,
+          "max_stress": 0.5796,
+          "connected": true,
+          "images": {
+            "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_00_geometry.png",
+            "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_00_stress.png",
+            "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_00_strain.png"
+          }
+        },
+        {
+          "step": 1,
+          "total_steps": 5,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              15.5,
+              31.0,
+              35.5,
+              23.2,
+              50.5,
+              14.5,
+              61.0,
+              6.8,
+              61.0,
+              32.0,
+              15.5,
+              32.0,
+              2.0
+            ],
+            "description": "Cut 6-gon pocket (fillet=2.0)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.7761,
+          "compliance": 42.0972,
+          "max_stress": 0.6229,
+          "connected": true,
+          "images": {
+            "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_01_geometry.png",
+            "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_01_stress.png",
+            "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_01_strain.png"
+          }
+        },
+        {
+          "step": 2,
+          "total_steps": 5,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              42.0,
+              -3.0,
+              56.0,
+              1.3,
+              62.0,
+              1.3,
+              62.0,
+              -3.0,
+              1.5
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.5)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.772,
+          "compliance": 42.1499,
+          "max_stress": 0.6354,
+          "connected": true,
+          "images": {
+            "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_02_geometry.png",
+            "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_02_stress.png",
+            "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_02_strain.png"
+          }
+        },
+        {
+          "step": 3,
+          "total_steps": 5,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              3.0,
+              23.7,
+              3.0,
+              5.8,
+              18.5,
+              22.8,
+              1.8
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.6996,
+          "compliance": 48.1917,
+          "max_stress": 0.7574,
+          "connected": true,
+          "images": {
+            "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_03_geometry.png",
+            "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_03_stress.png",
+            "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_03_strain.png"
+          }
+        },
+        {
+          "step": 4,
+          "total_steps": 5,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              5.4,
+              3.7,
+              21.0,
+              22.5,
+              36.2,
+              3.7,
+              1.8
+            ],
+            "description": "Cut 3-gon pocket (fillet=1.8)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.5429,
+          "compliance": 61.2745,
+          "max_stress": 0.7823,
+          "connected": true,
+          "images": {
+            "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_04_geometry.png",
+            "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_04_stress.png",
+            "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_04_strain.png"
+          }
+        },
+        {
+          "step": 5,
+          "total_steps": 5,
+          "action": {
+            "action_type": "polygon",
+            "params": [
+              23.7,
+              21.6,
+              39.1,
+              3.8,
+              52.4,
+              7.5,
+              34.6,
+              18.4,
+              1.6
+            ],
+            "description": "Cut 4-gon pocket (fillet=1.6)",
+            "mirror_x": false,
+            "mirror_y": false
+          },
+          "volume_fraction": 0.4489,
+          "compliance": 71.1475,
+          "max_stress": 0.7564,
+          "connected": true,
+          "images": {
+            "geometry": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_05_geometry.png",
+            "stress": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_05_stress.png",
+            "strain": "assets/cantilever-lightweight_cantilever-lightweight__GaCMd7P_step_05_strain.png"
+          }
+        }
+      ],
+      "arena_score": 82.87,
+      "volume_fraction": 0.4485,
+      "max_stress": 0.7564
     }
   ]
 }

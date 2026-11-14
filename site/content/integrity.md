@@ -1,6 +1,6 @@
 ## Reward Integrity
 
-Built for Harbor v1.4 and RL training, verification runs in **isolated mode (`environment_mode = "separate"`)** so agents cannot inspect `simp.py`, `oracle_solver.py`, or `verifier.py` inside the sandbox.
+Built for Harbor v1.4 and RL training, verification runs in **isolated mode (`environment_mode = "separate"`)** so agents cannot inspect the topological optimization objective ($C^*$), the reference implementation, or the verifier inside the sandbox.
 
 ### Strict Manufacturing Guardrails
 - **Disconnected Load Paths**: Floating or severed material earns `0.0`—agents cannot delete the part or isolate load bosses.

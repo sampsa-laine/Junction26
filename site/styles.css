@@ -247,10 +247,13 @@ main.container {
 }
 
 .hero-thumb > img {
-  width: 100%;
-  height: auto;
+  height: 170px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
   border-radius: 6px;
   display: block;
+  object-fit: contain;
 }
 
 .hero-thumb figcaption {
@@ -258,6 +261,7 @@ main.container {
   font-size: 0.78rem;
   color: var(--muted);
   font-family: var(--mono);
+  text-align: center;
 }
 
 .toc-bar {
@@ -475,8 +479,12 @@ select {
 }
 
 .viz-card img, .replay-images img {
-  width: 100%;
-  height: auto;
+  height: 240px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  display: block;
+  object-fit: contain;
   border-radius: 6px;
 }
 
@@ -575,11 +583,13 @@ select {
   gap: 16px;
 }
 
-.replay-mobile-toggle {
+.replay-mobile-toggle,
+.comp-mobile-toggle {
   display: none;
 }
 
-.replay-tab {
+.replay-tab,
+.comp-tab {
   flex: 1;
   text-align: center;
   background: var(--surface);
@@ -587,24 +597,46 @@ select {
   border: 1px solid var(--border);
   border-bottom: none;
   border-radius: 8px 8px 0 0;
-  padding: 7px 16px;
+  padding: 7px 12px;
   font-size: 0.88rem;
   font-weight: 500;
   cursor: pointer;
 }
 
-.replay-tab.active {
+.replay-tab.active,
+.comp-tab.active {
   background: var(--bg);
   color: var(--accent);
   border-color: var(--accent);
 }
 
 @media (max-width: 700px) {
-  .replay-mobile-toggle {
+  .replay-mobile-toggle,
+  .comp-mobile-toggle {
     display: flex;
     gap: 4px;
     border-bottom: 1px solid var(--border);
+    margin-top: 16px;
     margin-bottom: 10px;
+  }
+
+  .comparison-grid {
+    margin-top: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .viz-card img,
+  .replay-images img {
+    height: 220px;
+  }
+
+  #comparison-grid[data-mobile-active="simp"] .comp-slot-oracle,
+  #comparison-grid[data-mobile-active="simp"] .comp-slot-agent,
+  #comparison-grid[data-mobile-active="oracle"] .comp-slot-simp,
+  #comparison-grid[data-mobile-active="oracle"] .comp-slot-agent,
+  #comparison-grid[data-mobile-active="agent"] .comp-slot-simp,
+  #comparison-grid[data-mobile-active="agent"] .comp-slot-oracle {
+    display: none;
   }
 
   #replay-images[data-mobile-active="geometry"] .replay-slot-stress {

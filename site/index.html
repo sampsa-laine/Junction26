@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Break the Agent — 2D Structural CAD Lightweighting</title>
-  <link rel="stylesheet" href="styles.css?v=1794692898" />
+  <title>Break the Agent — 2D Structural Design</title>
+  <link rel="stylesheet" href="styles.css?v=1794700256" />
 </head>
 <body>
   <header class="topbar">
     <div class="container topbar-inner">
       <div class="brand">
-        <span class="brand-title">2D CAD TopOpt</span>
+        <span class="brand-title">2D Structural Design</span>
         <span class="team-badge" tabindex="0">
           by Qvabros
           <span class="team-popover" role="tooltip">
@@ -22,7 +22,7 @@
         </span>
       </div>
       <nav class="nav-links">
-        <a class="nav-github" href="https://github.com/sampsa-laine/Junction26" target="_blank" rel="noopener"><svg class="git-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M6 8.5v7"/><path d="M18 10.5c0 4-6 3-12 5"/></svg> Repo</a>
+        <a class="nav-github" href="https://github.com/sampsa-laine/Junction26" target="_blank" rel="noopener"><svg class="git-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M6 8.5v7"/><path d="M18 10.5c0 4-6 3-12 5"/></svg> Repository</a>
       </nav>
     </div>
   </header>
@@ -31,20 +31,18 @@
     <section id="overview" class="section hero-section">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1>Break the Agent: 2D Structural CAD Lightweighting</h1>
+          <h1>Break the Agent: 2D Structural Design</h1>
+<p><em>Built for <strong>Junction 2026</strong> to solve <strong>AfterQuery’s “Break the Agent” challenge</strong>: creating an RL environment that exposes real AI failure modes with exploit-resistant rewards.</em></p>
 <p><strong>Today’s AI agents can write thousands of lines of code in seconds. Ask them to design a real physical part—and they fail basic physics.</strong></p>
-<p>In aerospace and automotive engineering, removing excess weight without sacrificing strength is everything. Existing benchmarks test text or pixel grids you cannot machine—so we built a <strong>real 2D CAD &amp; Finite Element Analysis RL environment</strong> (<code>&lt;15ms</code> Q4 FEA) scored against <strong>SIMP topology optimization (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />)</strong>, teaching AI to think in forces, geometry, and steel.</p>
+<p>In aerospace and automotive engineering, removing excess weight without sacrificing strength is everything. Most AI benchmarks only test text or 2D pixel grids that you could never manufacture. We built a <strong>(RL) environment for real 2D structural design</strong>: agents carve shapes out of a solid metal plate and get millisecond physics feedback on whether the part will hold up under load, scored against theoretical <strong>topological optimization (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />)</strong>.</p>
 <ul>
-<li><strong>Machinable CAD</strong>: Parametric 2D CSG cutouts (<code>circle</code>, <code>rect</code>, <code>slot</code>, <code>polygon</code>, fillets, mirrors) with DXF/SVG export</li>
-<li><strong>Millisecond Physics</strong>: Vectorized Q4 FEA (Von Mises stress, strain energy, compliance)</li>
-<li><strong>Harbor + RL Suite</strong>: Graded multi-load benchmarks with an isolated anti-cheat verifier</li>
+<li><strong>Real Geometry</strong>: Agents cut holes, slots, and rounded pockets—not raw pixel grids—exportable to standard manufacturing files</li>
+<li><strong>Millisecond Physics</strong>: Instant structural simulation measuring stiffness, weight, and peak stress</li>
+<li><strong>Harbor + RL Suite</strong>: 3 graded multi-load benchmarks with an isolated anti-cheat verifier</li>
 </ul>
         </div>
         <div id="hero-visuals" class="hero-visuals">
-          <figure class="hero-thumb"><img src="assets/suspension-rocker-multiload_oracle_geometry.png" alt="Oracle CAD (0.94)" /><figcaption>Oracle CAD (0.94)</figcaption></figure>
-<figure class="hero-thumb"><img src="assets/suspension-rocker-multiload_oracle_stress.png" alt="Von Mises Stress" /><figcaption>Von Mises Stress</figcaption></figure>
-<figure class="hero-thumb"><img src="assets/suspension-rocker-multiload_simp_geometry.png" alt="SIMP Optimum ($C^*$)" /><figcaption>SIMP Optimum (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />)</figcaption></figure>
-<figure class="hero-thumb"><img src="assets/suspension-rocker-multiload_oracle_strain.png" alt="Strain Energy" /><figcaption>Strain Energy</figcaption></figure>
+          <figure class="hero-thumb"><img src="assets/assemblies.png" alt="CAD modeling is a laborous task." /><figcaption>CAD modeling is a laborous task.</figcaption></figure>
         </div>
       </div>
       <div class="hero-actions">
@@ -55,14 +53,20 @@
     <nav class="toc-bar" aria-label="Table of Contents">
       <span class="toc-label">Contents</span>
       <a href="#gap">1. The Gap</a>
-      <a href="#explorer">2. Visual &amp; Replay Explorer</a>
+      <a href="#explorer">2. Interactive Visual Explorer</a>
       <a href="#difficulty">3. Meaningful Difficulty</a>
       <a href="#integrity">4. Reward Integrity</a>
     </nav>
 
     <section id="gap" class="section">
       <h2>The Gap</h2>
-<p>Left to themselves, frontier models punch greedy holes wherever stress looks low—leaving behind fragile slivers, sharp stress fractures, or severed load paths. Our reference <strong>Oracle</strong> (<code>oracle_solver.py</code>) pairs <strong>SIMP topology optimization (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />)</strong> with parametric CSG fitting to achieve a near-optimal strength-to-weight ratio, while <strong>Do-Nothing</strong> (uncut stock) and <strong>Stop-Early</strong> baselines earn zero credit.</p>
+<p>Left to themselves, frontier models punch greedy holes wherever stress looks low—leaving behind fragile slivers, sharp stress fractures, or severed load paths. Our <strong>reference implementation</strong> pairs <strong>topological optimization (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />)</strong> with parametric shape fitting to achieve a near-optimal strength-to-weight ratio, while <strong>Do-Nothing</strong> (uncut stock) and <strong>Stop-Early</strong> baselines earn zero credit.</p>
+<h3>How Designs Are Scored &amp; Compared</h3>
+<ul>
+<li><strong>Theoretical Optimum (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />)</strong>: Each design&#x27;s stiffness (compliance under load) is measured against the continuous <strong>topological optimization</strong> lower bound (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />) for that geometry and load case.</li>
+<li><strong>Weight &amp; Stress Budgets</strong>: Passing designs must meet the target material volume (<code>&lt;= 35%–40%</code> of the solid plate) and peak stress limit without fragile slivers or disconnected parts.</li>
+<li><strong>Reference vs. Baselines</strong>: Frontier agents are compared directly against our <strong>Reference Implementation</strong> (parametric cutouts fitted to the <img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" /> optimum) and the <strong>Do-Nothing Baseline</strong> (uncut stock, scoring <code>0.0000</code>).</li>
+</ul>
 <h3>Why Coding Agents Break on Physical Design</h3>
 <ul>
 <li><strong>No Spatial Lookahead</strong>: Early cutouts without truss planning create weak hinges or disconnected islands.</li>
@@ -76,8 +80,8 @@
     <section id="explorer" class="section">
       <div class="explorer-header">
         <div>
-          <h2>Interactive Visual &amp; Replay Explorer</h2>
-          <p class="muted">Compare SIMP Theoretical Optimum, Parametric Oracle, and Harbor Agent runs across all 3 tasks.</p>
+          <h2>Interactive Visual Explorer</h2>
+          <p class="muted">Compare Topological Optimization, Reference Implementation, and Harbor Agent runs across all 4 tasks. Blue lines mark the immovable base/supports; red arrows show the applied forces.</p>
         </div>
         <div class="controls">
           <label>
@@ -95,12 +99,17 @@
         </div>
       </div>
 
+      <div class="comp-mobile-toggle" role="tablist" aria-label="Comparison model">
+        <button type="button" role="tab" class="comp-tab active" data-comp-view="simp">TopOpt</button>
+        <button type="button" role="tab" class="comp-tab" data-comp-view="oracle">Reference</button>
+        <button type="button" role="tab" class="comp-tab" data-comp-view="agent">Agent</button>
+      </div>
       <div id="comparison-grid" class="comparison-grid"></div>
 
       <div class="replay-box">
         <div class="replay-header">
           <div>
-            <h3>Cutout History Replay (0 &rarr; N)</h3>
+            <h3>Cutout History Replay</h3>
           </div>
           <label>
             Trajectory
@@ -126,7 +135,7 @@
     <section id="difficulty" class="section">
       <h2>Meaningful Difficulty</h2>
 <p>Every failure mode comes from genuine engineering decisions—not hidden rules or broken tools. Agents have full access to <code>cad-sim</code> / <code>cad_env</code> with <code>&lt;15ms</code> FEA feedback, stress/strain telemetry, volume fraction, and wall-thickness checks at every step.</p>
-<div class="table-wrap"><table><thead><tr><th>Task</th><th>Grid</th><th>Target Vol</th><th>Core Engineering Challenge</th></tr></thead><tbody><tr><td><code>cantilever-lightweight</code></td><td><code>60x30</code></td><td><code>&lt;= 0.45</code></td><td>Truss triangulation between fixed wall (<code>x=0</code>) and tip boss <code>(57, 4)</code></td></tr><tr><td><code>l-bracket-stress</code></td><td><code>50x50</code></td><td><code>&lt;= 0.36</code></td><td>Relieving sharp <code>(20, 20)</code> re-entrant corner stress (<code>von Mises &lt;= 1.85</code>)</td></tr><tr><td><code>suspension-rocker-multiload</code></td><td><code>80x40</code></td><td><code>&lt;= 0.40</code></td><td>Balancing <strong>3 mounting bosses</strong> across <strong>2 independent load cases</strong> (bump + braking)</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>Task</th><th>Grid</th><th>Target Vol</th><th>Core Engineering Challenge</th></tr></thead><tbody><tr><td><code>l-bracket-stress</code></td><td><code>50x50</code></td><td><code>&lt;= 0.36</code></td><td>Relieving sharp <code>(20, 20)</code> re-entrant corner stress (<code>von Mises &lt;= 1.85</code>)</td></tr><tr><td><code>suspension-rocker-multiload</code></td><td><code>80x40</code></td><td><code>&lt;= 0.40</code></td><td>Balancing <strong>3 mounting bosses</strong> across <strong>2 independent load cases</strong> (bump + braking)</td></tr><tr><td><code>aerospace-rib-obstacles</code></td><td><code>80x40</code></td><td><code>&lt;= 0.35</code></td><td>Routing load paths around <strong>2 void tunnels</strong> to <strong>3 lugs</strong> across <strong>3 load cases</strong> (<code>von Mises &lt;= 2.05</code>)</td></tr></tbody></table></div>
 <h3>Observed Agent Failure Modes</h3>
 <ul>
 <li><strong>Fragile Slivers &amp; Severed Paths (<code>0.0000</code>)</strong>: Greedy oversized cutouts break structural connectivity between supports and loads.</li>
@@ -143,7 +152,7 @@
 
     <section id="integrity" class="section">
       <h2>Reward Integrity</h2>
-<p>Built for Harbor v1.4 and RL training, verification runs in <strong>isolated mode (<code>environment_mode = &quot;separate&quot;</code>)</strong> so agents cannot inspect <code>simp.py</code>, <code>oracle_solver.py</code>, or <code>verifier.py</code> inside the sandbox.</p>
+<p>Built for Harbor v1.4 and RL training, verification runs in <strong>isolated mode (<code>environment_mode = &quot;separate&quot;</code>)</strong> so agents cannot inspect the topological optimization objective (<img class="math-inline" src="assets/math_6940d077648e.svg" alt="C^*" />), the reference implementation, or the verifier inside the sandbox.</p>
 <h3>Strict Manufacturing Guardrails</h3>
 <ul>
 <li><strong>Disconnected Load Paths</strong>: Floating or severed material earns <code>0.0</code>—agents cannot delete the part or isolate load bosses.</li>
@@ -153,6 +162,12 @@
 </ul>
 <blockquote><p>Teaching AI to think in forces, geometry, and steel means completing the structural task well is the <strong>only</strong> way to score.</p></blockquote>
     </section>
+
+    <section id="outro" class="section">
+      <h2>Conclusion</h2>
+<p>Frontier models can handle single-constraint lightweighting (<code>0.9494</code> on the L-bracket), <strong>but a clear gap opens under multi-load physics and geometric obstacles</strong> (<code>0.7771</code> on the suspension rocker; <code>0.7582</code> on the aerospace rib).</p>
+<p>Instant <code>&lt;15ms</code> physics feedback paired with strict manufacturing guardrails turns spatial engineering into a dense, exploit-resistant RL signal—giving agents a concrete path to close that gap.</p>
+    </section>
   </main>
 
   <footer class="footer container">
@@ -160,6 +175,6 @@
   </footer>
 
   <script>window.SITE_DATA_URL = "data/results.json";</script>
-  <script src="app.js?v=1794692898"></script>
+  <script src="app.js?v=1794700256"></script>
 </body>
 </html>

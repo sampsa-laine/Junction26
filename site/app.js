@@ -1,6 +1,12 @@
 (function () {
   const dataUrl = window.SITE_DATA_URL || "data/results.json";
 
+  const OFFICIAL_TASKS = new Set([
+    "l-bracket-stress",
+    "suspension-rocker-multiload",
+    "aerospace-rib-obstacles",
+  ]);
+
   function fmtReward(val) {
     return typeof val === "number" ? val.toFixed(4) : "pending";
   }
@@ -9,9 +15,12 @@
     const container = document.getElementById("gap-chart");
     container.innerHTML = "";
 
-    for (const task of data.tasks) {
+    for (const task of data.tasks.filter((t) => OFFICIAL_TASKS.has(t.task_id))) {
       const taskRuns = data.harbor_runs.filter(
-        (r) => r.task_id === task.task_id && typeof r.harbor_reward === "number"
+        (r) =>
+          r.task_id === task.task_id &&
+          r.agent !== "oracle" &&
+          typeof r.harbor_reward === "number"
       );
       const bestAgent = taskRuns.reduce(
         (best, cur) => (!best || cur.harbor_reward > best.harbor_reward ? cur : best),
@@ -30,7 +39,7 @@
           <span class="mono muted">target vol &le; ${task.target_volume}</span>
         </div>
         <div class="bar-row">
-          <span>Oracle Reference</span>
+          <span>Reference Implementation</span>
           <div class="bar-track"><div class="bar-fill bar-oracle" style="width:${(oracleReward * 100).toFixed(1)}%"></div></div>
           <span class="mono">${fmtReward(oracleReward)}</span>
         </div>
@@ -51,12 +60,15 @@
 
   function renderRunsTable(data) {
     const wrap = document.getElementById("runs-table-wrap");
-    if (!data.harbor_runs.length) {
+    const officialRuns = data.harbor_runs.filter((r) =>
+      OFFICIAL_TASKS.has(r.task_id)
+    );
+    if (!officialRuns.length) {
       wrap.innerHTML = `<p class="muted">No Harbor trials found in <code>jobs/</code> yet.</p>`;
       return;
     }
 
-    const rows = data.harbor_runs
+    const rows = officialRuns
       .map((r) => {
         const rewardStr = fmtReward(r.harbor_reward);
         const cls =
@@ -158,13 +170,17 @@
       }, 950);
     }
 
-    taskSelect.innerHTML = data.tasks
+    const orderedTasks = [
+      ...data.tasks.filter((t) => OFFICIAL_TASKS.has(t.task_id)),
+      ...data.tasks.filter((t) => !OFFICIAL_TASKS.has(t.task_id)),
+    ];
+    taskSelect.innerHTML = orderedTasks
       .map((t) => `<option value="${t.task_id}">${t.title}</option>`)
       .join("");
 
-    function makeVizCard(title, sub, imgSrc) {
+    function makeVizCard(title, sub, imgSrc, slotClass) {
       const div = document.createElement("div");
-      div.className = "viz-card";
+      div.className = `viz-card ${slotClass || ""}`.trim();
       div.innerHTML = `
         <strong>${title}</strong>
         <div class="viz-meta">${sub}</div>
@@ -181,7 +197,7 @@
       const sources = [
         {
           id: "oracle",
-          label: `Oracle (${fmtReward(task.oracle.harbor_reward)})`,
+          label: `Reference (${fmtReward(task.oracle.harbor_reward)})`,
           frames: task.oracle_replay || [],
         },
       ];
@@ -256,25 +272,34 @@
     function renderComparison() {
       const task = data.tasks.find((t) => t.task_id === taskSelect.value);
       const view = viewSelect.value;
+      if (!compGrid.dataset.mobileActive) {
+        compGrid.dataset.mobileActive = "simp";
+      }
       compGrid.innerHTML = "";
 
       compGrid.appendChild(
         makeVizCard(
-          "SIMP Optimum (C*)",
+          "Topological Optimization (C*)",
           `<span>Vol: ${task.simp.volume_fraction}</span><span>Comp: ${task.simp.compliance}</span>`,
-          task.simp.images[view]
+          task.simp.images[view],
+          "comp-slot-simp"
         )
       );
       compGrid.appendChild(
         makeVizCard(
-          "Parametric Oracle",
+          "Reference Implementation",
           `<span>Reward: ${fmtReward(task.oracle.harbor_reward)}</span><span>Vol: ${task.oracle.volume_fraction}</span>`,
-          task.oracle.images[view]
+          task.oracle.images[view],
+          "comp-slot-oracle"
         )
       );
 
       const agentRuns = data.harbor_runs.filter(
-        (r) => r.task_id === task.task_id && r.images && r.images[view]
+        (r) =>
+          r.task_id === task.task_id &&
+          r.agent !== "oracle" &&
+          r.images &&
+          r.images[view]
       );
       const bestAgent = agentRuns.reduce(
         (best, cur) =>
@@ -287,7 +312,8 @@
           makeVizCard(
             bestAgent.agent,
             `<span>Reward: ${fmtReward(bestAgent.harbor_reward)}</span><span>Vol: ${bestAgent.volume_fraction ?? "—"}</span>`,
-            bestAgent.images[view]
+            bestAgent.images[view],
+            "comp-slot-agent"
           )
         );
       } else {
@@ -295,7 +321,8 @@
           makeVizCard(
             "Frontier Agent",
             `<span>Status: pending / no design.json</span>`,
-            null
+            null,
+            "comp-slot-agent"
           )
         );
       }
@@ -360,6 +387,15 @@
       } else {
         startPlayback();
       }
+    });
+
+    document.querySelectorAll(".comp-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        compGrid.dataset.mobileActive = btn.dataset.compView;
+        document.querySelectorAll(".comp-tab").forEach((b) => {
+          b.classList.toggle("active", b === btn);
+        });
+      });
     });
 
     document.querySelectorAll(".replay-tab").forEach((btn) => {

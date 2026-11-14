@@ -1,14 +1,13 @@
-# Break the Agent: 2D Structural CAD Lightweighting
+# Break the Agent: 2D Structural Design
+
+*Built for **Junction 2026** to solve **AfterQuery’s “Break the Agent” challenge**: creating an RL environment that exposes real AI failure modes with exploit-resistant rewards.*
 
 **Today’s AI agents can write thousands of lines of code in seconds. Ask them to design a real physical part—and they fail basic physics.**
 
-In aerospace and automotive engineering, removing excess weight without sacrificing strength is everything. Existing benchmarks test text or pixel grids you cannot machine—so we built a **real 2D CAD & Finite Element Analysis RL environment** (`<15ms` Q4 FEA) scored against **SIMP topology optimization ($C^*$)**, teaching AI to think in forces, geometry, and steel.
+In aerospace and automotive engineering, removing excess weight without sacrificing strength is everything. Most AI benchmarks only test text or 2D pixel grids that you could never manufacture. We built a **(RL) environment for real 2D structural design**: agents carve shapes out of a solid metal plate and get millisecond physics feedback on whether the part will hold up under load, scored against theoretical **topological optimization ($C^*$)**.
 
-- **Machinable CAD**: Parametric 2D CSG cutouts (`circle`, `rect`, `slot`, `polygon`, fillets, mirrors) with DXF/SVG export
-- **Millisecond Physics**: Vectorized Q4 FEA (Von Mises stress, strain energy, compliance)
-- **Harbor + RL Suite**: Graded multi-load benchmarks with an isolated anti-cheat verifier
+- **Real Geometry**: Agents cut holes, slots, and rounded pockets—not raw pixel grids—exportable to standard manufacturing files
+- **Millisecond Physics**: Instant structural simulation measuring stiffness, weight, and peak stress
+- **Harbor + RL Suite**: 3 graded multi-load benchmarks with an isolated anti-cheat verifier
 
-![Oracle CAD (0.94)](assets/suspension-rocker-multiload_oracle_geometry.png)
-![Von Mises Stress](assets/suspension-rocker-multiload_oracle_stress.png)
-![SIMP Optimum ($C^*$)](assets/suspension-rocker-multiload_simp_geometry.png)
-![Strain Energy](assets/suspension-rocker-multiload_oracle_strain.png)
+![CAD modeling is a laborous task.](assets/assemblies.png)

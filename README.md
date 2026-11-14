@@ -15,6 +15,19 @@
 
 See [project layout and testing](doc/project-layout.md) for details.
 
+## Building the static site
+
+```shell
+# Full build (renders FEA/CAD plots from jobs/ + tasks/ and builds site/index.html)
+uv run build-site
+
+# Fast rebuild after editing site/content/*.md (reuses existing PNGs)
+uv run build-site --skip-renders
+
+# Preview locally
+python3 -m http.server --directory site 8000
+```
+
 ## Adding `uv` targets
 
 Note `junction26 = "junction26.main:main"` in `pyproject.toml`.

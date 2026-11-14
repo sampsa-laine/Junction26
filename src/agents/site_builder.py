@@ -18,6 +18,7 @@ matplotlib.use("Agg")
 from .csg import CADModel  # noqa: E402
 from .problem import (  # noqa: E402
     DesignProblem,
+    make_harbor_aerospace_rib,
     make_harbor_cantilever,
     make_harbor_l_bracket,
     make_harbor_suspension_rocker,
@@ -46,6 +47,11 @@ TASKS: list[tuple[str, str, DesignProblem]] = [
         "suspension-rocker-multiload",
         "Suspension Rocker Multiload (80x40)",
         make_harbor_suspension_rocker(),
+    ),
+    (
+        "aerospace-rib-obstacles",
+        "Aerospace Rib Obstacles (80x40)",
+        make_harbor_aerospace_rib(),
     ),
 ]
 
@@ -495,14 +501,14 @@ def render_index_html(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Break the Agent — 2D Structural CAD Lightweighting</title>
+  <title>Break the Agent — 2D Structural Design</title>
   <link rel="stylesheet" href="styles.css?v={cache_bust}" />
 </head>
 <body>
   <header class="topbar">
     <div class="container topbar-inner">
       <div class="brand">
-        <span class="brand-title">2D CAD TopOpt</span>
+        <span class="brand-title">2D Structural Design</span>
         <span class="team-badge" tabindex="0">
           by Qvabros
           <span class="team-popover" role="tooltip">
@@ -514,7 +520,7 @@ def render_index_html(
         </span>
       </div>
       <nav class="nav-links">
-        <a class="nav-github" href="{safe_repo_url}" target="_blank" rel="noopener">{git_svg} Repo</a>
+        <a class="nav-github" href="{safe_repo_url}" target="_blank" rel="noopener">{git_svg} Repository</a>
       </nav>
     </div>
   </header>
@@ -537,7 +543,7 @@ def render_index_html(
     <nav class="toc-bar" aria-label="Table of Contents">
       <span class="toc-label">Contents</span>
       <a href="#gap">1. The Gap</a>
-      <a href="#explorer">2. Visual &amp; Replay Explorer</a>
+      <a href="#explorer">2. Interactive Visual Explorer</a>
       <a href="#difficulty">3. Meaningful Difficulty</a>
       <a href="#integrity">4. Reward Integrity</a>
     </nav>
@@ -551,8 +557,8 @@ def render_index_html(
     <section id="explorer" class="section">
       <div class="explorer-header">
         <div>
-          <h2>Interactive Visual &amp; Replay Explorer</h2>
-          <p class="muted">Compare SIMP Theoretical Optimum, Parametric Oracle, and Harbor Agent runs across all 3 tasks.</p>
+          <h2>Interactive Visual Explorer</h2>
+          <p class="muted">Compare Topological Optimization, Reference Implementation, and Harbor Agent runs across all 4 tasks. Blue lines mark the immovable base/supports; red arrows show the applied forces.</p>
         </div>
         <div class="controls">
           <label>
@@ -570,12 +576,17 @@ def render_index_html(
         </div>
       </div>
 
+      <div class="comp-mobile-toggle" role="tablist" aria-label="Comparison model">
+        <button type="button" role="tab" class="comp-tab active" data-comp-view="simp">TopOpt</button>
+        <button type="button" role="tab" class="comp-tab" data-comp-view="oracle">Reference</button>
+        <button type="button" role="tab" class="comp-tab" data-comp-view="agent">Agent</button>
+      </div>
       <div id="comparison-grid" class="comparison-grid"></div>
 
       <div class="replay-box">
         <div class="replay-header">
           <div>
-            <h3>Cutout History Replay (0 &rarr; N)</h3>
+            <h3>Cutout History Replay</h3>
           </div>
           <label>
             Trajectory
@@ -604,6 +615,10 @@ def render_index_html(
 
     <section id="integrity" class="section">
       {sections_html.get("integrity", "")}
+    </section>
+
+    <section id="outro" class="section">
+      {sections_html.get("outro", "")}
     </section>
   </main>
 
