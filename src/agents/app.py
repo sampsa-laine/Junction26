@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 import io
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -240,14 +241,29 @@ def _render_three_panel_views(
 
 def main() -> None:
     st.set_page_config(
-        page_title="2D CAD TopOpt Inspector & Arena", page_icon="🏗️", layout="wide"
+        page_title="2D CAD Topology Optimization Inspector",
+        layout="wide",
     )
     st.markdown(
-        "<style>[data-testid='stStatusWidget'] { display: none !important; }</style>",
+        """
+        <style>
+        [data-testid='stStatusWidget'] { display: none !important; }
+        .block-container { padding-top: 2rem; }
+        [data-testid='stMetric'] {
+            border: 1px solid rgba(128, 128, 128, 0.22);
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+            background-color: rgba(128, 128, 128, 0.04);
+        }
+        .stTabs [data-baseweb="tab"] {
+            font-weight: 600;
+        }
+        </style>
+        """,
         unsafe_allow_html=True,
     )
 
-    st.title("🏗️ 2D CAD Topology Optimization Evaluation & Replay Inspector")
+    st.title("2D CAD Topology Optimization Inspector")
     st.caption(
         "Compare Harbor benchmark runs and in-repo solvers with FEA stress/strain fields and step-by-step CSG cutout replay"
     )
@@ -303,6 +319,7 @@ def main() -> None:
 
     selected_load_case: int | None = None
 
+    st.sidebar.divider()
     st.sidebar.header("Agent Solution")
     discovered_paths = discover_harbor_runs("jobs")
     filter_to_task = st.sidebar.checkbox(
@@ -333,7 +350,7 @@ def main() -> None:
         key="selected_harbor_trials",
     )
     newly_loaded_external: list[SolutionRecord] = []
-    if st.sidebar.button("📥 Load Selected Harbor Trials", key="load_harbor_btn"):
+    if st.sidebar.button("Load Selected Harbor Trials", key="load_harbor_btn"):
         for t_str in selected_trial_strs:
             try:
                 rec = load_harbor_trial(trial_option_map[t_str])
@@ -352,9 +369,8 @@ def main() -> None:
             _preferred_replay_solution_id(newly_loaded_external)
         )
 
-    if st.sidebar.button(
-        "🚀 Run In-Repo Solvers", type="primary", key="run_solvers_btn"
-    ):
+    st.sidebar.divider()
+    if st.sidebar.button("Run In-Repo Solvers", type="primary", key="run_solvers_btn"):
         stale_solver_ids = [
             sid
             for sid, sol in st.session_state["loaded_solutions"].items()
@@ -384,9 +400,9 @@ def main() -> None:
 
     tab_compare, tab_replay, tab_human = st.tabs(
         [
-            "🔍 Solution Comparison & Inspection",
-            "⏪ Cutout History Replay",
-            "✏️ Human Canvas",
+            "Comparison & Inspection",
+            "Cutout History Replay",
+            "Human Canvas",
         ]
     )
 
@@ -429,13 +445,13 @@ def main() -> None:
             displayed_solutions.append(_get_cached_human_solution(problem, human_model))
 
         if displayed_solutions:
-            st.subheader("📊 Unified Comparison Scoreboard")
+            st.subheader("Unified Comparison Scoreboard")
             rows = build_comparison_rows(displayed_solutions)
             st.table(rows)
 
-            st.subheader("🔬 Resulting Model, Stress & Strain Inspection")
+            st.subheader("Resulting Model, Stress & Strain Inspection")
             with st.expander(
-                "ℹ️ How Harbor Reward & Its 4 Factors Are Calculated",
+                "How Harbor Reward & Its 4 Factors Are Calculated",
                 expanded=False,
             ):
                 st.markdown(
@@ -499,7 +515,7 @@ def main() -> None:
                     )
                     st.divider()
         else:
-            st.subheader(f"📐 Selected Problem Geometry (`{problem.name}`)")
+            st.subheader(f"Selected Problem Geometry ({problem.name})")
             _render_stock_problem_preview(
                 problem=problem,
                 load_case_index=selected_load_case,
@@ -511,7 +527,7 @@ def main() -> None:
             )
 
     with tab_replay:
-        st.subheader("⏪ Step-by-Step Saved Cutout History Replay (0..N)")
+        st.subheader("Step-by-Step Cutout History Replay (0..N)")
         replay_candidates: dict[str, SolutionRecord] = dict(loaded_solutions)
         has_current_problem_solution = any(
             _problem_signature(sol.problem) == prob_sig
@@ -634,16 +650,27 @@ def main() -> None:
                 f"{replay_sol.label} (Step {active_step}/{total_steps})"
             )
 
-            r1, r2, r3, r4 = st.columns(4)
+            r1, r2, r3, r4, r5 = st.columns(5)
             r1.metric("Step", f"{active_step} / {total_steps}")
             r2.metric(
-                "Volume Fraction",
-                f"{current_frame.volume_fraction:.4f} (target <= {replay_sol.problem.target_volume_fraction:.2f})",
+                "Weight",
+                f"{current_frame.volume_fraction:.3f} (<= {replay_sol.problem.target_volume_fraction:.2f})",
             )
-            r3.metric("Compliance", f"{current_frame.compliance:.2f}")
+            r3.metric(
+                "Compliance",
+                f"{current_frame.compliance:.2f}"
+                if math.isfinite(current_frame.compliance)
+                else "inf",
+            )
             r4.metric(
-                "Max Von Mises / Connected",
-                f"{current_frame.max_von_mises_stress:.3f} | {'Yes' if current_frame.structurally_connected else 'No'}",
+                "Max Von Mises",
+                f"{current_frame.max_von_mises_stress:.3f}"
+                if replay_sol.problem.max_stress_limit is None
+                else f"{current_frame.max_von_mises_stress:.3f} (<= {replay_sol.problem.max_stress_limit:.2f})",
+            )
+            r5.metric(
+                "Connected",
+                "Yes" if current_frame.structurally_connected else "No",
             )
 
             if current_frame.action is None:
@@ -708,16 +735,30 @@ def main() -> None:
                     png_cache[traj_key] = traj_png
                 st.image(traj_png, width="stretch")
 
+            replay_stress_limit = replay_sol.problem.max_stress_limit
             step_rows = [
                 {
                     "Step": f.step,
-                    "Action": f.action.action_type if f.action else "stock",
-                    "Description": f.action.description
-                    if f.action
-                    else "Initial stock domain",
-                    "Volume": f"{f.volume_fraction:.4f}",
-                    "Compliance": f"{f.compliance:.2f}",
-                    "Max Stress": f"{f.max_von_mises_stress:.3f}",
+                    "Action": (
+                        f.action.action_type.replace("_", " ").title()
+                        if f.action
+                        else "Stock"
+                    ),
+                    "Description": (
+                        f.action.description if f.action else "Initial stock domain"
+                    ),
+                    "Volume / Target": (
+                        f"{f.volume_fraction:.3f} / "
+                        f"{replay_sol.problem.target_volume_fraction:.2f}"
+                    ),
+                    "Compliance": (
+                        f"{f.compliance:.2f}" if math.isfinite(f.compliance) else "inf"
+                    ),
+                    "Max Stress / Limit": (
+                        f"{f.max_von_mises_stress:.3f} / {replay_stress_limit:.2f}"
+                        if replay_stress_limit is not None
+                        else f"{f.max_von_mises_stress:.3f}"
+                    ),
                     "Connected": "Yes" if f.structurally_connected else "No",
                 }
                 for f in frames
@@ -725,7 +766,7 @@ def main() -> None:
             st.table(step_rows)
 
     with tab_human:
-        st.subheader("✏️ Interactive Human Designer Canvas")
+        st.subheader("Interactive Human Designer Canvas")
         col_tools, col_view = st.columns([1, 3])
         with col_tools:
             cut_type = st.radio(
@@ -755,7 +796,7 @@ def main() -> None:
                     4.0,
                     key="human_cr",
                 )
-                if st.button("➕ Cut Circle", key="human_cut_circle_btn"):
+                if st.button("Cut Circle", key="human_cut_circle_btn"):
                     if human_model.cut_circle(hx, hy, hr):
                         st.session_state["_enable_human_compare_next_run"] = True
                         st.rerun()
@@ -777,7 +818,7 @@ def main() -> None:
                     "Height", 3.0, float(problem.height / 2.0), 5.0, key="human_rh"
                 )
                 rfillet = st.slider("Corner Fillet", 0.0, 4.0, 1.0, key="human_rf")
-                if st.button("➕ Cut Rectangle", key="human_cut_rect_btn"):
+                if st.button("Cut Rectangle", key="human_cut_rect_btn"):
                     if human_model.cut_rect(rx, ry, rw, rh, fillet_radius=rfillet):
                         st.session_state["_enable_human_compare_next_run"] = True
                         st.rerun()
@@ -805,7 +846,7 @@ def main() -> None:
                     2.5,
                     key="human_sr",
                 )
-                if st.button("➕ Cut Slot", key="human_cut_slot_btn"):
+                if st.button("Cut Slot", key="human_cut_slot_btn"):
                     if human_model.cut_slot(sx1, sy1, sx2, sy2, sr):
                         st.session_state["_enable_human_compare_next_run"] = True
                         st.rerun()
@@ -815,10 +856,10 @@ def main() -> None:
                         )
 
             c_undo, c_reset = st.columns(2)
-            if c_undo.button("↩️ Undo", key="human_undo_btn"):
+            if c_undo.button("Undo", key="human_undo_btn"):
                 if human_model.undo():
                     st.rerun()
-            if c_reset.button("🔄 Reset", key="human_reset_btn"):
+            if c_reset.button("Reset", key="human_reset_btn"):
                 if len(human_model.history) > 0:
                     human_model.reset()
                     st.rerun()
