@@ -5,13 +5,14 @@ from typing import Literal
 from matplotlib import colormaps
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_agg import FigureCanvasAgg
-from matplotlib.colors import LogNorm, Normalize
+from matplotlib.colors import LinearSegmentedColormap, LogNorm, Normalize
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle, PathPatch, Rectangle
 from matplotlib.path import Path as MplPath
 import numpy as np
-from shapely.geometry import Polygon
+from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry.polygon import orient
+from shapely.ops import unary_union
 
 from .csg import CADModel, CutoutAction
 from .fea import FEAResult, FEASolver
@@ -20,7 +21,18 @@ from .solutions import ReplayFrame, SolutionRecord
 
 FieldKind = Literal["stress", "strain_energy"]
 
-_LOAD_CASE_COLORS = ("#dc2626", "#7c3aed", "#ea580c", "#0891b2")
+_BG_FIG = "#0f172a"
+_BG_PLOT = "#0b1120"
+_BG_CARD = "#162033"
+_BORDER = "#1e293b"
+_TEXT_PRIMARY = "#f8fafc"
+_TEXT_MUTED = "#94a3b8"
+_MODEL_FILL = "#8b9bb4"
+_MODEL_EDGE = "#cbd5e1"
+_MODEL_CMAP = LinearSegmentedColormap.from_list(
+    "metallic_steel_model", [_BG_PLOT, "#475569", _MODEL_FILL, _MODEL_EDGE]
+)
+_LOAD_CASE_COLORS = ("#ff2a85", "#00f5ff", "#ffe600", "#d946ef")
 
 
 @dataclass
@@ -34,9 +46,19 @@ class InspectionViews:
 
 
 def _new_figure(figsize: tuple[float, float] = (5.0, 3.2), dpi: int = 110) -> Figure:
-    fig = Figure(figsize=figsize, dpi=dpi)
+    fig = Figure(figsize=figsize, dpi=dpi, facecolor=_BG_FIG)
     FigureCanvasAgg(fig)
     return fig
+
+
+def _style_dark_axis(ax: Axes) -> None:
+    ax.set_facecolor(_BG_PLOT)
+    ax.tick_params(colors=_TEXT_MUTED, labelsize=7)
+    ax.xaxis.label.set_color(_TEXT_MUTED)
+    ax.yaxis.label.set_color(_TEXT_MUTED)
+    ax.title.set_color(_TEXT_PRIMARY)
+    for spine in ax.spines.values():
+        spine.set_color(_BORDER)
 
 
 def _polygon_to_compound_path(poly: Polygon) -> MplPath | None:
@@ -85,8 +107,8 @@ def compute_load_case_fea(
 def _draw_keepouts(ax: Axes, problem: DesignProblem) -> None:
     for ko in problem.keepouts:
         is_solid = ko.keepout_type == KeepOutType.SOLID
-        edge = "#059669" if is_solid else "#94a3b8"
-        face = (0.02, 0.59, 0.41, 0.14) if is_solid else (0.95, 0.96, 0.98, 0.85)
+        edge = "#c084fc" if is_solid else "#64748b"
+        face = (0.75, 0.52, 0.99, 0.16) if is_solid else (0.04, 0.05, 0.09, 0.85)
         style = ":" if is_solid else "--"
         if ko.shape == "circle":
             cx, cy, r = ko.params
@@ -117,21 +139,59 @@ def _draw_keepouts(ax: Axes, problem: DesignProblem) -> None:
             )
 
 
+def _support_bar_geometries(problem: DesignProblem, rad: float) -> list[Polygon]:
+    """Builds unified capsule/stadium shapes for collinear support points."""
+    supports = problem.supports
+    if not supports:
+        return []
+    used: set[int] = set()
+    shapes = []
+    for i, s in enumerate(supports):
+        if i in used:
+            continue
+        same_x = [
+            j for j, o in enumerate(supports) if j not in used and abs(o.x - s.x) < 1e-3
+        ]
+        same_y = [
+            j for j, o in enumerate(supports) if j not in used and abs(o.y - s.y) < 1e-3
+        ]
+        group = same_x if len(same_x) >= len(same_y) else same_y
+        used.update(group)
+        pts = [(supports[j].x, supports[j].y) for j in group]
+        if len(pts) == 1:
+            shapes.append(Point(pts[0]).buffer(rad))
+        else:
+            pts_sorted = sorted(pts)
+            shapes.append(
+                LineString([pts_sorted[0], pts_sorted[-1]]).buffer(
+                    rad, cap_style="round", join_style="round"
+                )
+            )
+    merged = unary_union(shapes)
+    if merged.geom_type == "Polygon":
+        return [merged]  # type: ignore[list-item]
+    return [g for g in getattr(merged, "geoms", []) if g.geom_type == "Polygon"]
+
+
 def _draw_supports_and_loads(
     ax: Axes, problem: DesignProblem, load_case_index: int | None
 ) -> None:
     if problem.supports:
-        sx = [s.x for s in problem.supports]
-        sy = [s.y for s in problem.supports]
-        ax.plot(
-            sx,
-            sy,
-            marker="^",
-            color="#0f172a",
-            markersize=4.5,
-            linestyle="none",
-            zorder=6,
-        )
+        min_dim = min(problem.width, problem.height)
+        rad = max(max(float(s.tolerance) for s in problem.supports), 0.025 * min_dim)
+        for poly in _support_bar_geometries(problem, rad):
+            path = _polygon_to_compound_path(poly)
+            if path is not None:
+                ax.add_patch(
+                    PathPatch(
+                        path,
+                        facecolor="#00f5ff",
+                        edgecolor="#07080f",
+                        linewidth=1.4,
+                        alpha=1.0,
+                        zorder=5,
+                    )
+                )
 
     cases = problem.effective_load_cases
     if load_case_index is not None:
@@ -143,7 +203,7 @@ def _draw_supports_and_loads(
     else:
         active_cases = list(enumerate(cases))
 
-    arrow_scale = 0.16 * min(problem.width, problem.height)
+    arrow_scale = 0.25 * min(problem.width, problem.height)
     for case_idx, loads in active_cases:
         color = _LOAD_CASE_COLORS[case_idx % len(_LOAD_CASE_COLORS)]
         for load in loads:
@@ -157,10 +217,27 @@ def _draw_supports_and_loads(
                 xy=(load.x + dx, load.y + dy),
                 xytext=(load.x, load.y),
                 arrowprops={
-                    "arrowstyle": "->",
+                    "arrowstyle": "-|>,head_length=0.5,head_width=0.26",
+                    "color": "#07080f",
+                    "lw": 3.0,
+                    "mutation_scale": 14,
+                    "joinstyle": "miter",
+                    "capstyle": "butt",
+                    "alpha": 0.9,
+                },
+                zorder=6,
+            )
+            ax.annotate(
+                "",
+                xy=(load.x + dx, load.y + dy),
+                xytext=(load.x, load.y),
+                arrowprops={
+                    "arrowstyle": "-|>,head_length=0.5,head_width=0.26",
                     "color": color,
-                    "lw": 1.8,
-                    "mutation_scale": 11,
+                    "lw": 1.7,
+                    "mutation_scale": 14,
+                    "joinstyle": "miter",
+                    "capstyle": "butt",
                 },
                 zorder=7,
             )
@@ -176,14 +253,15 @@ def render_model_geometry_figure(
 ) -> Figure:
     fig = _new_figure()
     ax = fig.add_subplot(111)
+    _style_dark_axis(ax)
 
     ax.add_patch(
         Rectangle(
             (0.0, 0.0),
             problem.width,
             problem.height,
-            facecolor="#f8fafc",
-            edgecolor="#cbd5e1",
+            facecolor=_BG_PLOT,
+            edgecolor=_BORDER,
             linestyle="--",
             linewidth=0.9,
             zorder=0,
@@ -197,10 +275,10 @@ def render_model_geometry_figure(
                 ax.add_patch(
                     PathPatch(
                         path,
-                        facecolor="#3b82f6",
-                        edgecolor="#1d4ed8",
-                        linewidth=1.1,
-                        alpha=0.88,
+                        facecolor=_MODEL_FILL,
+                        edgecolor=_MODEL_EDGE,
+                        linewidth=1.2,
+                        alpha=0.82,
                         zorder=2,
                     )
                 )
@@ -209,7 +287,7 @@ def render_model_geometry_figure(
             density,
             origin="lower",
             extent=(0.0, problem.width, 0.0, problem.height),
-            cmap="Greys",
+            cmap=_MODEL_CMAP,
             vmin=0.0,
             vmax=1.0,
             interpolation="nearest",
@@ -230,8 +308,8 @@ def render_model_geometry_figure(
                 ax.add_patch(
                     PathPatch(
                         path,
-                        facecolor=(0.94, 0.27, 0.27, 0.22),
-                        edgecolor="#dc2626",
+                        facecolor=(0.98, 0.44, 0.52, 0.25),
+                        edgecolor="#fb7185",
                         linestyle="--",
                         linewidth=1.6,
                         zorder=5,
@@ -253,10 +331,72 @@ def render_model_geometry_figure(
         if cad_model is not None
         else float(np.mean(density))
     )
-    resolved_title = title or f"Resulting Model (Vol={vol:.3f})"
-    ax.set_title(resolved_title, fontsize=9, fontweight="bold")
+    resolved_title = title or f"Resulting Model (Weight={vol:.3f})"
+    ax.set_title(resolved_title, fontsize=9, fontweight="bold", color=_TEXT_PRIMARY)
     fig.tight_layout()
     return fig
+
+
+def _field_range(
+    raw_field: np.ndarray,
+    density: np.ndarray,
+    log_scale: bool,
+) -> tuple[float, float]:
+    void_mask = density <= 1e-3
+    solid_values = raw_field[~void_mask]
+    finite_values = solid_values[np.isfinite(solid_values)]
+    if log_scale and finite_values.size > 0:
+        positive_values = finite_values[finite_values > 0.0]
+        if positive_values.size > 0:
+            vmin = float(np.min(positive_values))
+            vmax = float(np.max(positive_values))
+            if vmax <= vmin * (1.0 + 1e-9):
+                vmin = max(vmax * 0.1, 1e-30)
+                vmax = max(vmax, vmin * 10.0)
+            return vmin, vmax
+        return 1e-6, 1.0
+    if finite_values.size > 0:
+        vmin = float(min(0.0, np.min(finite_values)))
+        vmax = float(np.max(finite_values))
+        if vmax <= vmin + 1e-12:
+            vmax = vmin + 1.0
+        return vmin, vmax
+    return 0.0, 1.0
+
+
+def compute_replay_field_ranges(
+    frames: Sequence[ReplayFrame],
+    log_strain: bool = False,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Computes shared (vmin, vmax) across all replay frames for stress and strain energy."""
+    if not frames:
+        return (0.0, 1.0), (1e-6 if log_strain else 0.0, 1.0)
+
+    stress_ranges = [
+        _field_range(f.fea_result.von_mises_stress, f.density, log_scale=False)
+        for f in frames
+    ]
+    strain_ranges = [
+        _field_range(
+            f.fea_result.element_strain_energies, f.density, log_scale=log_strain
+        )
+        for f in frames
+    ]
+    stress_min = min(r[0] for r in stress_ranges)
+    stress_max = max(r[1] for r in stress_ranges)
+    if stress_max <= stress_min + 1e-12:
+        stress_max = stress_min + 1.0
+
+    strain_min = min(r[0] for r in strain_ranges)
+    strain_max = max(r[1] for r in strain_ranges)
+    if log_strain:
+        strain_min = max(strain_min, 1e-30)
+        if strain_max <= strain_min * (1.0 + 1e-9):
+            strain_max = strain_min * 10.0
+    elif strain_max <= strain_min + 1e-12:
+        strain_max = strain_min + 1.0
+
+    return (stress_min, stress_max), (strain_min, strain_max)
 
 
 def render_fea_field_figure(
@@ -267,14 +407,16 @@ def render_fea_field_figure(
     cad_model: CADModel | None = None,
     log_scale: bool = False,
     title: str | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
 ) -> Figure:
     if field == "stress":
         raw_field = fea_result.von_mises_stress
-        cmap_name = "turbo"
+        cmap_name = "inferno"
         default_label = "Von Mises Stress"
     elif field == "strain_energy":
         raw_field = fea_result.element_strain_energies
-        cmap_name = "viridis"
+        cmap_name = "plasma"
         default_label = "Element Strain Energy"
     else:
         raise ValueError(
@@ -285,35 +427,29 @@ def render_fea_field_figure(
     masked_field = np.ma.masked_where(void_mask, raw_field)
 
     base_cmap = colormaps[cmap_name]
-    cmap = base_cmap.with_extremes(bad="#f8fafc")
+    cmap = base_cmap.with_extremes(bad=_BG_PLOT)
 
     solid_values = raw_field[~void_mask]
     finite_values = solid_values[np.isfinite(solid_values)]
 
-    if log_scale and finite_values.size > 0:
-        positive_values = finite_values[finite_values > 0.0]
-        if positive_values.size > 0:
-            vmin = float(np.min(positive_values))
-            vmax = float(np.max(positive_values))
-            if vmax <= vmin * (1.0 + 1e-9):
-                vmin = max(vmax * 0.1, 1e-30)
-                vmax = max(vmax, vmin * 10.0)
-            cmap = base_cmap.with_extremes(bad="#f8fafc", under=base_cmap(0.0))
-            norm = LogNorm(vmin=vmin, vmax=vmax, clip=False)
-        else:
-            norm = Normalize(vmin=0.0, vmax=1.0)
+    auto_vmin, auto_vmax = _field_range(raw_field, density, log_scale=log_scale)
+    resolved_vmin = auto_vmin if vmin is None else float(vmin)
+    resolved_vmax = auto_vmax if vmax is None else float(vmax)
+
+    if log_scale:
+        resolved_vmin = max(resolved_vmin, 1e-30)
+        if resolved_vmax <= resolved_vmin * (1.0 + 1e-9):
+            resolved_vmax = resolved_vmin * 10.0
+        cmap = base_cmap.with_extremes(bad=_BG_PLOT, under=base_cmap(0.0))
+        norm = LogNorm(vmin=resolved_vmin, vmax=resolved_vmax, clip=False)
     else:
-        if finite_values.size > 0:
-            vmin = float(min(0.0, np.min(finite_values)))
-            vmax = float(np.max(finite_values))
-            if vmax <= vmin + 1e-12:
-                vmax = vmin + 1.0
-            norm = Normalize(vmin=vmin, vmax=vmax)
-        else:
-            norm = Normalize(vmin=0.0, vmax=1.0)
+        if resolved_vmax <= resolved_vmin + 1e-12:
+            resolved_vmax = resolved_vmin + 1.0
+        norm = Normalize(vmin=resolved_vmin, vmax=resolved_vmax)
 
     fig = _new_figure()
     ax = fig.add_subplot(111)
+    _style_dark_axis(ax)
 
     im = ax.imshow(
         masked_field,
@@ -333,9 +469,9 @@ def render_fea_field_figure(
                     PathPatch(
                         path,
                         facecolor="none",
-                        edgecolor="#0f172a",
-                        linewidth=0.7,
-                        alpha=0.65,
+                        edgecolor="#f8fafc",
+                        linewidth=0.75,
+                        alpha=0.45,
                         zorder=3,
                     )
                 )
@@ -344,8 +480,9 @@ def render_fea_field_figure(
     if field == "stress" and problem.max_stress_limit is not None:
         cbar_label = f"{default_label} (limit <= {problem.max_stress_limit:.2f})"
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label(cbar_label, fontsize=7.5)
-    cbar.ax.tick_params(labelsize=7)
+    cbar.set_label(cbar_label, fontsize=7.5, color=_TEXT_MUTED)
+    cbar.ax.tick_params(labelsize=7, colors=_TEXT_MUTED)
+    cbar.outline.set_edgecolor(_BORDER)  # type: ignore[attr-defined]
 
     peak_val = float(np.max(finite_values)) if finite_values.size > 0 else 0.0
     if title is None:
@@ -378,6 +515,8 @@ def render_solution_views(
     load_case_index: int | None = None,
     log_strain: bool = False,
     highlight_cutout: bool = True,
+    stress_range: tuple[float, float] | None = None,
+    strain_range: tuple[float, float] | None = None,
 ) -> InspectionViews:
     if isinstance(solution_or_frame, SolutionRecord):
         target_problem = solution_or_frame.problem
@@ -428,6 +567,8 @@ def render_solution_views(
         cad_model=cad_model,
         log_scale=False,
         title=f"Von Mises Stress{case_tag} (Max={float(np.max(fea_res.von_mises_stress)):.3f})",
+        vmin=stress_range[0] if stress_range is not None else None,
+        vmax=stress_range[1] if stress_range is not None else None,
     )
     strain_fig = render_fea_field_figure(
         problem=active_problem,
@@ -437,6 +578,8 @@ def render_solution_views(
         cad_model=cad_model,
         log_scale=log_strain,
         title=f"Strain Energy{case_tag} (C={fea_res.compliance:.2f})",
+        vmin=strain_range[0] if strain_range is not None else None,
+        vmax=strain_range[1] if strain_range is not None else None,
     )
 
     return InspectionViews(
@@ -462,43 +605,55 @@ def render_replay_trajectory_figure(
     comps = [f.compliance for f in frames]
     stresses = [f.max_von_mises_stress for f in frames]
 
-    ax_vol.plot(steps, vols, marker="o", color="#2563eb", linewidth=1.6, markersize=4)
+    for axis in (ax_vol, ax_comp, ax_stress):
+        _style_dark_axis(axis)
+
+    ax_vol.plot(steps, vols, marker="o", color="#22d3ee", linewidth=1.8, markersize=4)
     ax_vol.axhline(
         problem.target_volume_fraction,
-        color="#059669",
+        color="#facc15",
         linestyle="--",
         linewidth=1.1,
         label=f"Target ({problem.target_volume_fraction:.2f})",
     )
-    ax_vol.set_title("Volume Fraction", fontsize=8.5, fontweight="bold")
+    ax_vol.set_title("Weight", fontsize=8.5, fontweight="bold")
     ax_vol.set_xlabel("Step", fontsize=7.5)
-    ax_vol.legend(fontsize=7, loc="best")
-    ax_vol.tick_params(labelsize=7)
+    ax_vol.legend(
+        fontsize=7,
+        loc="best",
+        facecolor=_BG_CARD,
+        edgecolor=_BORDER,
+        labelcolor=_TEXT_PRIMARY,
+    )
 
-    ax_comp.plot(steps, comps, marker="o", color="#7c3aed", linewidth=1.6, markersize=4)
+    ax_comp.plot(steps, comps, marker="o", color="#e879f9", linewidth=1.8, markersize=4)
     ax_comp.set_title("Compliance", fontsize=8.5, fontweight="bold")
     ax_comp.set_xlabel("Step", fontsize=7.5)
-    ax_comp.tick_params(labelsize=7)
 
     ax_stress.plot(
-        steps, stresses, marker="o", color="#dc2626", linewidth=1.6, markersize=4
+        steps, stresses, marker="o", color="#fb923c", linewidth=1.8, markersize=4
     )
     if problem.max_stress_limit is not None:
         ax_stress.axhline(
             problem.max_stress_limit,
-            color="#ea580c",
+            color="#facc15",
             linestyle="--",
             linewidth=1.1,
             label=f"Limit ({problem.max_stress_limit:.2f})",
         )
-        ax_stress.legend(fontsize=7, loc="best")
+        ax_stress.legend(
+            fontsize=7,
+            loc="best",
+            facecolor=_BG_CARD,
+            edgecolor=_BORDER,
+            labelcolor=_TEXT_PRIMARY,
+        )
     ax_stress.set_title("Max Von Mises Stress", fontsize=8.5, fontweight="bold")
     ax_stress.set_xlabel("Step", fontsize=7.5)
-    ax_stress.tick_params(labelsize=7)
 
     if active_step is not None:
         for axis in (ax_vol, ax_comp, ax_stress):
-            axis.axvline(active_step, color="#0f172a", linestyle=":", linewidth=1.0)
+            axis.axvline(active_step, color=_TEXT_PRIMARY, linestyle=":", linewidth=1.1)
 
     fig.tight_layout()
     return fig

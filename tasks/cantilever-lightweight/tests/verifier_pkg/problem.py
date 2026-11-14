@@ -425,8 +425,77 @@ def make_harbor_suspension_rocker() -> DesignProblem:
     )
 
 
+def make_harbor_aerospace_rib() -> DesignProblem:
+    """Task 4 (Hard/Expert): 3-load-case aerospace rib with 3 solid lugs + 2 void pipe tunnels."""
+    width, height = 80.0, 40.0
+    nx, ny = 64, 32
+
+    supports = [
+        Support(x=0.0, y=y, fixed_x=True, fixed_y=True, tolerance=1.3)
+        for y in [i * (height / ny) for i in range(ny + 1)]
+    ]
+
+    lug_top = (74.0, 32.0, 4.0)
+    lug_bot = (74.0, 8.0, 4.0)
+    lug_mid = (42.0, 35.0, 3.5)
+
+    # 3 distinct flight/landing load cases: tip bending, axial+shear, and mid-spar torsion
+    case_pullup = [
+        Load(x=lug_top[0], y=lug_top[1], fx=0.0, fy=-1.1),
+        Load(x=lug_bot[0], y=lug_bot[1], fx=0.0, fy=-0.7),
+    ]
+    case_gust = [
+        Load(x=lug_top[0], y=lug_top[1], fx=-0.8, fy=0.9),
+        Load(x=lug_mid[0], y=lug_mid[1], fx=0.4, fy=-1.0),
+    ]
+    case_shear = [
+        Load(x=lug_bot[0], y=lug_bot[1], fx=0.7, fy=1.1),
+        Load(x=lug_mid[0], y=lug_mid[1], fx=-0.6, fy=0.8),
+    ]
+
+    keepouts = [
+        KeepOut(
+            shape="rect", params=(0.0, 0.0, 3.0, height), keepout_type=KeepOutType.SOLID
+        ),
+        KeepOut(shape="circle", params=lug_top, keepout_type=KeepOutType.SOLID),
+        KeepOut(shape="circle", params=lug_bot, keepout_type=KeepOutType.SOLID),
+        KeepOut(shape="circle", params=lug_mid, keepout_type=KeepOutType.SOLID),
+        # 2 void hydraulic/avionics pass-through tunnels that truss chords must route around
+        KeepOut(
+            shape="circle", params=(30.0, 20.0, 4.0), keepout_type=KeepOutType.VOID
+        ),
+        KeepOut(
+            shape="circle", params=(54.0, 20.0, 4.0), keepout_type=KeepOutType.VOID
+        ),
+    ]
+
+    return DesignProblem(
+        name="Aerospace Rib with Obstacle Tunnels",
+        width=width,
+        height=height,
+        nx=nx,
+        ny=ny,
+        supports=supports,
+        loads=case_pullup,
+        load_cases=[case_pullup, case_gust, case_shear],
+        keepouts=keepouts,
+        target_volume_fraction=0.35,
+        filter_radius=1.8,
+        max_stress_limit=2.05,
+        min_feature_radius=1.5,
+        min_wall_thickness=1.6,
+        max_cutouts=22,
+        description=(
+            "Design an 80x40 aerospace wing rib (<=35% volume fraction) routing "
+            "triangulated load paths around 2 void pass-through tunnels to 3 solid "
+            "mounting lugs across 3 independent load cases."
+        ),
+    )
+
+
 HARBOR_TASK_BUILDERS = {
     "cantilever-lightweight": make_harbor_cantilever,
     "l-bracket-stress": make_harbor_l_bracket,
     "suspension-rocker-multiload": make_harbor_suspension_rocker,
+    "aerospace-rib-obstacles": make_harbor_aerospace_rib,
 }

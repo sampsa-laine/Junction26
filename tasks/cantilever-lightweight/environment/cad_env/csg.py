@@ -384,6 +384,32 @@ class CADModel:
         passes = bridge_ok and sliver_ratio <= 0.05
         return passes, sliver_ratio
 
+    def check_boundary_smoothness(self) -> tuple[bool, float]:
+        """Evaluates CNC manufacturability & smoothness of parametric cutouts.
+
+        Penalizes unfilleted sharp polygon pockets and jagged high-vertex contours
+        (>8 vertices), returning (is_smooth, smoothness_factor in [0.65, 1.0]).
+        """
+        if not self.history:
+            return True, 1.0
+
+        penalty = 0.0
+        for action in self.history:
+            if action.action_type == "polygon":
+                n_verts = (len(action.params) - 1) // 2
+                fillet = action.params[-1]
+                if n_verts > 8:
+                    penalty += 0.04 * (n_verts - 8)
+                if fillet < self.problem.min_feature_radius * 0.5:
+                    penalty += 0.06
+            elif action.action_type == "rect":
+                fillet = action.params[4] if len(action.params) >= 5 else 0.0
+                if fillet < self.problem.min_feature_radius * 0.25:
+                    penalty += 0.03
+
+        factor = float(max(0.65, 1.0 - penalty))
+        return factor >= 0.95, factor
+
     def check_feature_constraints(self) -> list[str]:
         """Validates cutout count and minimum tool/feature radius constraints."""
         violations: list[str] = []

@@ -10,22 +10,17 @@ import numpy as np
 
 from .csg import CADModel, CutoutAction
 from .fea import FEAResult, FEASolver
-from .llm_designer import LLMCADDesigner
 from .metrics import EvaluationScoreboard, evaluate_design
 from .oracle_solver import ParametricCADOptimizer
 from .problem import (
     HARBOR_TASK_BUILDERS,
     DesignProblem,
-    make_cantilever_beam,
-    make_l_bracket,
-    make_mbb_beam,
-    make_suspension_arm,
 )
 from .simp import SIMPOptimizer, SIMPResult
 from .verifier import VerificationResult
 
 SourceKind = Literal["harbor_run", "in_repo_solver", "design_file", "human"]
-InRepoSolverName = Literal["simp", "oracle_solver", "llm_designer"]
+InRepoSolverName = Literal["simp", "oracle_solver"]
 
 
 @dataclass(frozen=True)
@@ -59,33 +54,12 @@ PROBLEM_PRESETS: dict[str, ProblemPreset] = {
         task_id="suspension-rocker-multiload",
         builder=HARBOR_TASK_BUILDERS["suspension-rocker-multiload"],
     ),
-    "cantilever": ProblemPreset(
-        key="cantilever",
-        display_name="Arena: Cantilever Beam",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_cantilever_beam,
-    ),
-    "mbb": ProblemPreset(
-        key="mbb",
-        display_name="Arena: MBB Beam",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_mbb_beam,
-    ),
-    "l_bracket": ProblemPreset(
-        key="l_bracket",
-        display_name="Arena: L-Bracket",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_l_bracket,
-    ),
-    "suspension": ProblemPreset(
-        key="suspension",
-        display_name="Arena: Suspension Arm",
-        is_harbor_task=False,
-        task_id=None,
-        builder=make_suspension_arm,
+    "aerospace-rib-obstacles": ProblemPreset(
+        key="aerospace-rib-obstacles",
+        display_name="Harbor 4: Aerospace Rib with Obstacle Tunnels",
+        is_harbor_task=True,
+        task_id="aerospace-rib-obstacles",
+        builder=HARBOR_TASK_BUILDERS["aerospace-rib-obstacles"],
     ),
 }
 
@@ -96,14 +70,8 @@ _PROBLEM_NAME_TO_PRESET_KEY: dict[str, str] = {
     "l-bracket-stress": "l-bracket-stress",
     "multi-load suspension rocker": "suspension-rocker-multiload",
     "suspension-rocker-multiload": "suspension-rocker-multiload",
-    "cantilever beam": "cantilever",
-    "cantilever": "cantilever",
-    "mbb beam": "mbb",
-    "mbb": "mbb",
-    "l-bracket": "l_bracket",
-    "l_bracket": "l_bracket",
-    "suspension arm": "suspension",
-    "suspension": "suspension",
+    "aerospace rib with obstacle tunnels": "aerospace-rib-obstacles",
+    "aerospace-rib-obstacles": "aerospace-rib-obstacles",
 }
 
 _SIMP_CACHE: dict[tuple[str, int], SIMPResult] = {}
@@ -376,6 +344,61 @@ def evaluate_cad_verification(
             num_actions=len(model.history),
         )
 
+    _, smoothness_factor = model.check_boundary_smoothness()
+    (
+        reward,
+        stiffness_factor,
+        volume_factor,
+        stress_factor,
+        manufacturability_factor,
+    ) = _compute_reward_factors(
+        problem,
+        comp=comp,
+        ref_c=ref_c,
+        vol=vol,
+        stock_vol=stock_vol,
+        max_vm=max_vm,
+        wall_ok=wall_ok,
+        sliver_ratio=sliver_ratio,
+        smoothness_factor=smoothness_factor,
+    )
+
+    return VerificationResult(
+        reward=reward,
+        valid=True,
+        reason="Valid parametric CAD design evaluated.",
+        volume_fraction=round(vol, 4),
+        target_volume_fraction=round(problem.target_volume_fraction, 4),
+        stock_volume_fraction=round(stock_vol, 4),
+        agent_compliance=round(comp, 4),
+        simp_reference_compliance=round(ref_c, 4),
+        case_compliances=[round(c, 4) for c in fea_result.case_compliances],
+        max_von_mises_stress=round(max_vm, 4),
+        max_stress_limit=problem.max_stress_limit,
+        structurally_connected=connected,
+        wall_thickness_ok=wall_ok,
+        thin_sliver_ratio=round(sliver_ratio, 4),
+        stiffness_factor=round(stiffness_factor, 4),
+        volume_factor=round(volume_factor, 4),
+        stress_factor=round(stress_factor, 4),
+        manufacturability_factor=round(manufacturability_factor, 4),
+        num_actions=len(model.history),
+    )
+
+
+def _compute_reward_factors(
+    problem: DesignProblem,
+    *,
+    comp: float,
+    ref_c: float,
+    vol: float,
+    stock_vol: float,
+    max_vm: float,
+    wall_ok: bool,
+    sliver_ratio: float,
+    smoothness_factor: float,
+) -> tuple[float, float, float, float, float]:
+    """Compute Harbor reward and its 4 multiplicative factors."""
     target_v = problem.target_volume_fraction
     vol_adjusted_comp = comp * max(1.0, vol / max(target_v, 1e-6))
     stiffness_factor = float(
@@ -398,36 +421,21 @@ def evaluate_cad_verification(
         stress_factor = 1.0
 
     if wall_ok:
-        manufacturability_factor = 1.0
+        manufacturability_factor = float(smoothness_factor)
     else:
-        sliver_pen = max(0.55, 1.0 - 2.5 * sliver_ratio)
-        manufacturability_factor = float(0.80 * sliver_pen)
+        sliver_pen = max(0.45, 1.0 - 3.0 * sliver_ratio)
+        manufacturability_factor = float(0.40 * sliver_pen * smoothness_factor)
 
     raw_reward = (
         stiffness_factor * volume_factor * stress_factor * manufacturability_factor
     )
     reward = round(float(np.clip(raw_reward, 0.0, 1.0)), 4)
-
-    return VerificationResult(
-        reward=reward,
-        valid=True,
-        reason="Valid parametric CAD design evaluated.",
-        volume_fraction=round(vol, 4),
-        target_volume_fraction=round(target_v, 4),
-        stock_volume_fraction=round(stock_vol, 4),
-        agent_compliance=round(comp, 4),
-        simp_reference_compliance=round(ref_c, 4),
-        case_compliances=[round(c, 4) for c in fea_result.case_compliances],
-        max_von_mises_stress=round(max_vm, 4),
-        max_stress_limit=problem.max_stress_limit,
-        structurally_connected=connected,
-        wall_thickness_ok=wall_ok,
-        thin_sliver_ratio=round(sliver_ratio, 4),
-        stiffness_factor=round(stiffness_factor, 4),
-        volume_factor=round(volume_factor, 4),
-        stress_factor=round(stress_factor, 4),
-        manufacturability_factor=round(manufacturability_factor, 4),
-        num_actions=len(model.history),
+    return (
+        reward,
+        stiffness_factor,
+        volume_factor,
+        stress_factor,
+        manufacturability_factor,
     )
 
 
@@ -665,10 +673,10 @@ def _read_optional_reward(
     return None
 
 
-def _extract_agent_solver_name(
+def _extract_agent_info_parts(
     result_payload: dict[str, Any] | None,
     config_payload: dict[str, Any] | None,
-) -> str:
+) -> tuple[str | None, str | None]:
     agent_name: str | None = None
     model_name: str | None = None
 
@@ -690,6 +698,14 @@ def _extract_agent_solver_name(
             elif isinstance(model_info, dict):
                 model_name = model_name or _as_optional_str(model_info.get("name"))
 
+    return agent_name, model_name
+
+
+def _extract_agent_solver_name(
+    result_payload: dict[str, Any] | None,
+    config_payload: dict[str, Any] | None,
+) -> str:
+    agent_name, model_name = _extract_agent_info_parts(result_payload, config_payload)
     if agent_name and model_name:
         return f"{agent_name} ({model_name})"
     return agent_name or "harbor_agent"
@@ -751,11 +767,12 @@ def load_harbor_trial(
     fea_res = solver.solve(density, penalty=1.0)
 
     ref_simp = reference_simp or get_cached_reference_simp(resolved_problem)
+    agent_name, model_name = _extract_agent_info_parts(result_payload, config_payload)
     solver_label = _extract_agent_solver_name(result_payload, config_payload)
     trial_name = (
         _as_optional_str(result_payload.get("trial_name")) if result_payload else None
     ) or trial_dir.name
-    display_label = f"Harbor [{solver_label}] — {trial_name}"
+    display_label = f"AI Agent: {model_name or agent_name or solver_label}"
 
     scoreboard = evaluate_design(
         display_label, density, resolved_problem, reference_simp=ref_simp, solver=solver
@@ -916,6 +933,49 @@ def run_in_repo_solver(
         scoreboard = evaluate_design(
             label, density, problem, reference_simp=simp_res, solver=solver
         )
+        stock_vol = CADModel(problem).get_stock_volume_fraction()
+        vol = float(np.mean(density))
+        comp = float(fea_res.compliance)
+        ref_c = float(simp_res.minimum_compliance)
+        max_vm = float(np.max(fea_res.von_mises_stress))
+        (
+            simp_reward,
+            stiffness_f,
+            volume_f,
+            stress_f,
+            mfg_f,
+        ) = _compute_reward_factors(
+            problem,
+            comp=comp,
+            ref_c=ref_c,
+            vol=vol,
+            stock_vol=stock_vol,
+            max_vm=max_vm,
+            wall_ok=True,
+            sliver_ratio=0.0,
+            smoothness_factor=1.0,
+        )
+        simp_ver = VerificationResult(
+            reward=simp_reward,
+            valid=True,
+            reason="Continuous SIMP theoretical reference evaluated.",
+            volume_fraction=round(vol, 4),
+            target_volume_fraction=round(problem.target_volume_fraction, 4),
+            stock_volume_fraction=round(stock_vol, 4),
+            agent_compliance=round(comp, 4),
+            simp_reference_compliance=round(ref_c, 4),
+            case_compliances=[round(c, 4) for c in fea_res.case_compliances],
+            max_von_mises_stress=round(max_vm, 4),
+            max_stress_limit=problem.max_stress_limit,
+            structurally_connected=True,
+            wall_thickness_ok=True,
+            thin_sliver_ratio=0.0,
+            stiffness_factor=round(stiffness_f, 4),
+            volume_factor=round(volume_f, 4),
+            stress_factor=round(stress_f, 4),
+            manufacturability_factor=round(mfg_f, 4),
+            num_actions=0,
+        )
         return SolutionRecord(
             solution_id=f"solver:simp:{_problem_short_id(problem)}",
             label=label,
@@ -927,8 +987,8 @@ def run_in_repo_solver(
             density=density,
             fea_result=fea_res,
             scoreboard=scoreboard,
-            verification=None,
-            harbor_reward=None,
+            verification=simp_ver,
+            harbor_reward=simp_ver.reward,
             metadata={
                 "iterations": simp_res.iterations,
                 "compliance_history": list(simp_res.compliance_history),
@@ -942,18 +1002,12 @@ def run_in_repo_solver(
 
     if normalized == "oracle_solver":
         cad_model = ParametricCADOptimizer(problem).optimize()
-        label = "Oracle Solver (SIMP-to-CAD)"
+        label = "Reference Solution"
         canonical_solver = "oracle_solver"
-    elif normalized == "llm_designer":
-        llm_res = LLMCADDesigner(problem).design(**kwargs)
-        cad_model = llm_res.cad_model
-        label = "LLM ReAct Designer"
-        canonical_solver = "llm_designer"
-        extra_metadata["transcript"] = llm_res.transcript
     else:
         raise ValueError(
             f"Unsupported solver_name {solver_name!r}; expected one of "
-            "'simp', 'oracle_solver', 'llm_designer'."
+            "'simp', 'oracle_solver'."
         )
 
     density = cad_model.to_density_grid()
@@ -1025,29 +1079,27 @@ def build_comparison_rows(solutions: Sequence[SolutionRecord]) -> list[dict[str,
             if stress_limit is not None
             else f"{max_vm:.3f}"
         )
-        case_comp_str = ", ".join(f"{c:.2f}" for c in sol.fea_result.case_compliances)
         comp_val = sol.fea_result.compliance
         comp_str = f"{comp_val:.2f}" if math.isfinite(comp_val) else "inf"
 
         rows.append(
             {
                 "Solution": sol.label,
-                "Source": sol.source_kind,
-                "Solver": sol.solver_name,
                 "Problem": sol.problem.name,
                 "Harbor Reward": (
                     f"{sol.harbor_reward:.4f}"
                     if sol.harbor_reward is not None
-                    else "N/A (Non-CAD)"
+                    else "N/A"
                 ),
-                "Arena Score": f"{sol.scoreboard.overall_score:.1f}",
+                "Stiffness": f"{ver.stiffness_factor:.4f}"
+                if ver is not None
+                else "N/A",
+                "Weight": f"{ver.volume_factor:.4f}" if ver is not None else "N/A",
+                "Stress": f"{ver.stress_factor:.4f}" if ver is not None else "N/A",
+                "Manufacturability": (
+                    f"{ver.manufacturability_factor:.4f}" if ver is not None else "N/A"
+                ),
                 "Compliance": comp_str,
-                "Case Compliances": case_comp_str,
-                "SIMP Gap %": (
-                    "0.0%"
-                    if sol.solver_name == "simp"
-                    else f"+{sol.scoreboard.optimality_gap_percent:.1f}%"
-                ),
                 "Volume / Target": (
                     f"{sol.scoreboard.volume_fraction:.3f} / "
                     f"{sol.problem.target_volume_fraction:.2f}"

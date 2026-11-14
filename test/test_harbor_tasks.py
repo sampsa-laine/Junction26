@@ -114,6 +114,14 @@ class TestHarborVerifierAndTasks(unittest.TestCase):
                 self.assertGreater(
                     res.reward, 0.85, msg=f"{tid} oracle reward too low: {res}"
                 )
+                self.assertEqual(
+                    res.manufacturability_factor,
+                    1.0,
+                    msg=f"{tid} oracle should be fully smooth & manufacturable",
+                )
+                for act in oracle_model.history:
+                    if act.action_type == "polygon":
+                        self.assertLessEqual((len(act.params) - 1) // 2, 8)
                 self.assertLessEqual(res.reward, 1.0)
 
             # Partial-credit design gets smooth reward in (0, oracle)
@@ -129,7 +137,7 @@ class TestHarborVerifierAndTasks(unittest.TestCase):
 
     def test_synced_harbor_layout_and_sandbox_isolation(self) -> None:
         task_dirs = sync_harbor_tasks()
-        self.assertEqual(len(task_dirs), 3)
+        self.assertEqual(len(task_dirs), 4)
 
         for t_dir in task_dirs:
             self.assertTrue((t_dir / "task.toml").exists())

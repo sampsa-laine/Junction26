@@ -1,0 +1,44 @@
+schema_version = "1.4"
+artifacts = ["/app/design.json"]
+
+[task]
+name = "junction26/aerospace-rib-obstacles"
+version = "1.0.0"
+description = "Design an 80x40 aerospace wing rib (<=35% volume fraction) routing triangulated load paths around 2 void pass-through tunnels to 3 solid mounting lugs across 3 independent load cases."
+authors = [{ name = "Junction26 Team", email = "team@junction26.local" }]
+keywords = ["cad", "fea", "topology-optimization", "mechanical-engineering", "simulation"]
+
+[metadata]
+author_name = "Junction26 Team"
+author_email = "team@junction26.local"
+difficulty = "hard"
+category = "scientific_computing"
+tags = ["cad", "fea", "structural-optimization", "csg"]
+expert_time_estimate_min = 45.0
+junior_time_estimate_min = 120.0
+
+[verifier]
+timeout_sec = 180.0
+environment_mode = "separate"
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 900.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 900.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+PYTHONPATH = "/opt"
+CAD_PROBLEM_PATH = "/app/problem.json"
+CAD_DESIGN_PATH = "/app/design.json"
+CAD_TIME_LIMIT_SEC = "600"
+CAD_TARGET_FINISH_SEC = "540"
+
+[solution.env]
+PYTHONPATH = "/solution:/opt"

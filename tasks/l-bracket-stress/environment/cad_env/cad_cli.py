@@ -3,6 +3,8 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
+import time
 from typing import Any
 
 import numpy as np
@@ -176,12 +178,53 @@ def inspect_design(problem: DesignProblem, model: CADModel) -> dict[str, Any]:
     }
 
 
+def _format_duration(seconds: float) -> str:
+    secs = max(0, int(round(seconds)))
+    mins, rem = divmod(secs, 60)
+    return f"{mins}m {rem:02d}s"
+
+
+def _get_time_budget_lines() -> list[str]:
+    hard_limit = float(os.environ.get("CAD_TIME_LIMIT_SEC", "600"))
+    target_finish = float(os.environ.get("CAD_TARGET_FINISH_SEC", "540"))
+
+    env_start = os.environ.get("CAD_SESSION_START_TS")
+    if env_start is not None:
+        start_ts = float(env_start)
+    else:
+        marker = Path(tempfile.gettempdir()) / f".cad_sim_start_{os.getuid()}.ts"
+        if marker.exists():
+            try:
+                start_ts = float(marker.read_text().strip())
+            except ValueError:
+                start_ts = time.time()
+                marker.write_text(f"{start_ts:.3f}")
+        else:
+            start_ts = time.time()
+            marker.write_text(f"{start_ts:.3f}")
+
+    elapsed = max(0.0, time.time() - start_ts)
+    rem_target = max(0.0, target_finish - elapsed)
+    lines = [
+        f"Time Budget     : {_format_duration(elapsed)} elapsed | "
+        f"Finish target <= {_format_duration(target_finish)} ({_format_duration(rem_target)} left) | "
+        f"Hard limit {_format_duration(hard_limit)}"
+    ]
+    if elapsed >= target_finish - 60.0:
+        lines.append(
+            "WARNING: Approaching/past 9-minute finish target — finalize /app/design.json and stop now!"
+        )
+    return lines
+
+
 def _print_summary(
     problem: DesignProblem, report: dict[str, Any], show_ascii: bool
 ) -> None:
     print(
         f"=== {problem.name} | Actions: {report['num_actions']}/{report['max_cutouts']} ==="
     )
+    for line in _get_time_budget_lines():
+        print(line)
     print(
         f"Volume Fraction : {report['volume_fraction']:.4f} "
         f"(Target <= {report['target_volume_fraction']:.4f}, Stock = {report['stock_volume_fraction']:.4f}) "

@@ -7,12 +7,14 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+import unittest.mock
 
 from matplotlib.colors import LogNorm
 import matplotlib.pyplot as plt
 import numpy as np
 from streamlit.testing.v1 import AppTest
 
+from src.agents.cad_canvas import apply_canvas_action, build_canvas_payload
 from src.agents.csg import CADModel
 from src.agents.fea import FEAResult, FEASolver
 from src.agents.problem import (
@@ -39,6 +41,7 @@ from src.agents.solutions import (
 from src.agents.verifier import score_cad_submission
 from src.agents.visualizer import (
     compute_load_case_fea,
+    compute_replay_field_ranges,
     render_fea_field_figure,
     render_model_geometry_figure,
     render_replay_trajectory_figure,
@@ -66,6 +69,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
                 "cantilever-lightweight": 0.45,
                 "l-bracket-stress": 0.36,
                 "suspension-rocker-multiload": 0.40,
+                "aerospace-rib-obstacles": 0.35,
             }
 
             for idx, (task_id, builder) in enumerate(HARBOR_TASK_BUILDERS.items()):
@@ -130,8 +134,8 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
                     (ver_dir / "reward.txt").write_text("0.7777\n")
 
             discovered = discover_harbor_runs(jobs_root)
-            self.assertEqual(len(discovered), 3)
-            self.assertEqual(len(discover_harbor_runs(job_dir)), 3)
+            self.assertEqual(len(discovered), 4)
+            self.assertEqual(len(discover_harbor_runs(job_dir)), 4)
             self.assertEqual(len(discover_harbor_runs(discovered[0])), 1)
 
             loaded_records = [load_harbor_trial(p) for p in discovered]
@@ -158,7 +162,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
             self.assertAlmostEqual(cant_rec.harbor_reward or 0.0, 0.7777, places=4)
 
             rows = build_comparison_rows(loaded_records)
-            self.assertEqual(len(rows), 3)
+            self.assertEqual(len(rows), 4)
 
     def test_existing_workspace_harbor_jobs_load_when_present(self) -> None:
         workspace_trials = discover_harbor_runs("jobs")
@@ -168,15 +172,12 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
             self.assertIsNotNone(rec.cad_model)
             self.assertIsNotNone(rec.harbor_reward)
 
-    def test_problem_resolution_priority_and_arena_presets(self) -> None:
+    def test_problem_resolution_priority_and_harbor_presets(self) -> None:
         for name in (
-            "Cantilever Beam",
-            "MBB Beam",
-            "L-Bracket",
-            "Suspension Arm",
             "Cantilever Lightweight Bracket",
             "Stress-Constrained L-Bracket",
             "Multi-Load Suspension Rocker",
+            "Aerospace Rib with Obstacle Tunnels",
         ):
             prob, _ = resolve_problem_for_design(design_data={"problem_name": name})
             self.assertEqual(prob.name, name)
@@ -186,7 +187,7 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
             colocated_prob.target_volume_fraction = 0.31
             colocated_prob.save_json(Path(tmp) / "problem.json")
             resolved, _ = resolve_problem_for_design(
-                design_data={"problem_name": "Cantilever Beam"},
+                design_data={"problem_name": "Cantilever Lightweight Bracket"},
                 search_dir=tmp,
             )
             self.assertAlmostEqual(resolved.target_volume_fraction, 0.31, places=5)
@@ -201,24 +202,19 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
         oracle_rec = run_in_repo_solver(
             problem, "oracle_solver", reference_simp=ref_simp
         )
-        llm_rec = run_in_repo_solver(
-            problem, "llm_designer", reference_simp=ref_simp, max_steps=4
-        )
 
         self.assertIsNone(simp_rec.cad_model)
-        self.assertIsNone(simp_rec.verification)
+        self.assertIsNotNone(simp_rec.verification)
+        self.assertIsNotNone(simp_rec.harbor_reward)
         self.assertEqual(simp_rec.density.shape, (problem.ny, problem.nx))
 
-        for csg_rec in (oracle_rec, llm_rec):
-            self.assertIsNotNone(csg_rec.cad_model)
-            self.assertIsNotNone(csg_rec.verification)
-            self.assertIsNotNone(csg_rec.harbor_reward)
-            direct_fea = FEASolver(problem).solve(csg_rec.density, penalty=1.0)
-            self.assertAlmostEqual(
-                csg_rec.fea_result.compliance, direct_fea.compliance, places=6
-            )
-
-        self.assertIn("transcript", llm_rec.metadata)
+        self.assertIsNotNone(oracle_rec.cad_model)
+        self.assertIsNotNone(oracle_rec.verification)
+        self.assertIsNotNone(oracle_rec.harbor_reward)
+        direct_fea = FEASolver(problem).solve(oracle_rec.density, penalty=1.0)
+        self.assertAlmostEqual(
+            oracle_rec.fea_result.compliance, direct_fea.compliance, places=6
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             design_path = Path(tmp) / "oracle_design.json"
@@ -233,9 +229,10 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
                 loaded_design.verification.reward, official_ver.reward, places=4
             )
 
-        rows = build_comparison_rows([simp_rec, oracle_rec, llm_rec])
-        self.assertEqual(len(rows), 3)
-        self.assertEqual(rows[0]["Harbor Reward"], "N/A (Non-CAD)")
+        rows = build_comparison_rows([simp_rec, oracle_rec])
+        self.assertEqual(len(rows), 2)
+        self.assertNotEqual(rows[0]["Harbor Reward"], "N/A (Non-CAD)")
+        self.assertGreater(float(rows[0]["Harbor Reward"]), 0.0)
 
     def test_multi_regime_verifier_parity_and_defensive_loading(self) -> None:
         cantilever = make_harbor_cantilever()
@@ -713,12 +710,15 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(len(at.exception), 0)
         self.assertTrue(any("Target Vol: 0.36" in c.value for c in at.sidebar.caption))
 
-        at.sidebar.multiselect(key="selected_solvers").set_value(["simp"]).run(
-            timeout=30
-        )
-        at.sidebar.button(key="run_solvers_btn").click().run(timeout=45)
+        at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
         self.assertGreaterEqual(len(at.table), 1)
+        simp_id = next(
+            opt
+            for opt in at.selectbox(key="replay_solution_selector").options
+            if "simp" in opt.lower()
+        )
+        at.selectbox(key="replay_solution_selector").set_value(simp_id).run(timeout=30)
         self.assertTrue(
             any("Continuous SIMP density" in info.value for info in at.info)
         )
@@ -729,14 +729,9 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertEqual(len(at.exception), 0)
         self.assertTrue(any("Target Vol: 0.40" in c.value for c in at.sidebar.caption))
 
-        at.sidebar.multiselect(key="selected_solvers").set_value(
-            ["simp", "llm_designer"]
-        ).run(timeout=30)
         at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
 
-        at.sidebar.selectbox(key="load_case_selector").set_value(1).run(timeout=30)
-        self.assertEqual(len(at.exception), 0)
         at.sidebar.checkbox(key="log_strain").check().run(timeout=30)
         self.assertEqual(len(at.exception), 0)
 
@@ -752,11 +747,15 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             (trial_dir / "verifier").mkdir(parents=True)
             (trial_dir / "verifier" / "reward.txt").write_text("0.8800\n")
 
-            at.sidebar.text_input(key="custom_solution_path").set_value(
-                str(trial_dir)
-            ).run(timeout=30)
-            at.sidebar.button(key="load_custom_path_btn").click().run(timeout=45)
-            self.assertEqual(len(at.exception), 0)
+            with unittest.mock.patch(
+                "src.agents.solutions.discover_harbor_runs", return_value=[trial_dir]
+            ):
+                at.run(timeout=30)
+                at.sidebar.multiselect(key="selected_harbor_trials").set_value(
+                    [str(trial_dir)]
+                ).run(timeout=30)
+                at.sidebar.button(key="load_harbor_btn").click().run(timeout=45)
+                self.assertEqual(len(at.exception), 0)
 
             harbor_sol_id = f"harbor:{trial_dir.resolve()}"
             at.selectbox(key="replay_solution_selector").set_value(harbor_sol_id).run(
@@ -771,13 +770,12 @@ class TestStreamlitFrontendApp(unittest.TestCase):
 
             uncut_file = Path(tmp) / "uncut_design.json"
             CADModel(prob).save_json(uncut_file)
-            at.sidebar.text_input(key="custom_solution_path").set_value(
-                str(uncut_file)
-            ).run(timeout=30)
-            at.sidebar.button(key="load_custom_path_btn").click().run(timeout=30)
+            uncut_rec = load_design_solution(uncut_file)
+            at.session_state["loaded_solutions"][uncut_rec.solution_id] = uncut_rec
+            at.run(timeout=30)
             self.assertEqual(len(at.exception), 0)
 
-            uncut_id = f"design_file:{uncut_file.resolve()}"
+            uncut_id = uncut_rec.solution_id
             at.selectbox(key="replay_solution_selector").set_value(uncut_id).run(
                 timeout=30
             )
@@ -794,12 +792,18 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             ["Human Designer (0 cutouts)"],
         )
 
+        at.radio(key="human_cut_type").set_value("Circular Hole").run(timeout=30)
         at.button(key="human_cut_circle_btn").click().run(timeout=30)
         self.assertEqual(len(at.exception), 0)
+        self.assertNotIn("human_fea_snapshot", at.session_state)
         self.assertEqual(
             at.selectbox(key="replay_solution_selector").options,
             ["Human Designer (1 cutouts)"],
         )
+
+        at.button(key="human_refresh_fea_btn").click().run(timeout=30)
+        self.assertEqual(len(at.exception), 0)
+        self.assertIn("human_fea_snapshot", at.session_state)
 
         at.radio(key="human_cut_type").set_value("Rectangular Cutout").run(timeout=30)
         self.assertEqual(len(at.exception), 0)
@@ -856,35 +860,25 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             (rocker_trial / "verifier").mkdir(parents=True)
             (rocker_trial / "verifier" / "reward.txt").write_text("0.9100\n")
 
-            at.sidebar.text_input(key="custom_solution_path").set_value(
-                str(rocker_trial)
-            ).run(timeout=30)
-            at.sidebar.button(key="load_custom_path_btn").click().run(timeout=45)
-            self.assertEqual(len(at.exception), 0)
-            self.assertEqual(
-                at.sidebar.selectbox(key="load_case_selector").options,
-                ["All Cases (Envelope / Sum)", "Load Case 1", "Load Case 2"],
-            )
-
-            at.sidebar.selectbox(key="load_case_selector").set_value(1).run(timeout=30)
-            self.assertEqual(len(at.exception), 0)
+            with unittest.mock.patch(
+                "src.agents.solutions.discover_harbor_runs",
+                return_value=[rocker_trial],
+            ):
+                at.run(timeout=30)
+                at.sidebar.multiselect(key="selected_harbor_trials").set_value(
+                    [str(rocker_trial)]
+                ).run(timeout=30)
+                at.sidebar.button(key="load_harbor_btn").click().run(timeout=45)
+                self.assertEqual(len(at.exception), 0)
 
             rocker_sol_id = f"harbor:{rocker_trial.resolve()}"
             at.selectbox(key="replay_solution_selector").set_value(rocker_sol_id).run(
                 timeout=30
             )
             self.assertEqual(len(at.exception), 0)
-            self.assertTrue(
-                any(
-                    opt.startswith("Replay: ")
-                    for opt in at.selectbox(key="export_model_selector").options
-                )
-            )
+            self.assertIn("active_replay_model", at.session_state)
 
-            at.sidebar.multiselect(key="selected_solvers").set_value(["simp"]).run(
-                timeout=30
-            )
-            at.sidebar.button(key="run_solvers_btn").click().run(timeout=45)
+            at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
             self.assertEqual(len(at.exception), 0)
             simp_ids = [
                 sid
@@ -898,30 +892,12 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             self.assertEqual(len(at.exception), 0)
             self.assertNotIn("active_replay_model", at.session_state)
             self.assertNotIn("active_replay_label", at.session_state)
-            self.assertFalse(
-                any(
-                    opt.startswith("Replay: ")
-                    for opt in at.selectbox(key="export_model_selector").options
-                )
-            )
 
             at.selectbox(key="replay_solution_selector").set_value(rocker_sol_id).run(
                 timeout=30
             )
             self.assertEqual(len(at.exception), 0)
             self.assertIn("active_replay_model", at.session_state)
-
-            at.sidebar.button(key="clear_solutions_btn").click().run(timeout=30)
-            self.assertEqual(len(at.exception), 0)
-            self.assertEqual(len(at.session_state["loaded_solutions"]), 0)
-            self.assertNotIn(
-                "suspension-rocker-multiload",
-                at.session_state.get("active_replay_label", ""),
-            )
-            self.assertEqual(
-                at.sidebar.selectbox(key="load_case_selector").options,
-                ["All Cases (Envelope / Sum)", "Load Case 1"],
-            )
 
     def test_multi_preset_same_solver_export_disambiguation_and_clean_slider_sync(
         self,
@@ -941,6 +917,7 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             at.run(timeout=30)
             self.assertEqual(len(at.exception), 0)
 
+            at.radio(key="human_cut_type").set_value("Circular Hole").run(timeout=30)
             at.button(key="human_cut_circle_btn").click().run(timeout=30)
             at.radio(key="human_cut_type").set_value("Rectangular Cutout").run(
                 timeout=30
@@ -951,30 +928,15 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             self.assertEqual(len(at.exception), 0)
             self.assertEqual(at.slider(key="replay_step_slider").value, 1)
 
-            at.sidebar.multiselect(key="selected_solvers").set_value(
-                ["llm_designer"]
-            ).run(timeout=30)
             at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
             self.assertEqual(len(at.exception), 0)
 
             at.sidebar.selectbox(key="preset_key").set_value("l-bracket-stress").run(
                 timeout=30
             )
-            at.sidebar.multiselect(key="selected_solvers").set_value(
-                ["llm_designer"]
-            ).run(timeout=30)
             at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
             self.assertEqual(len(at.exception), 0)
 
-            export_options = at.selectbox(key="export_model_selector").options
-            self.assertIn(
-                "LLM ReAct Designer (Cantilever Lightweight Bracket)",
-                export_options,
-            )
-            self.assertIn(
-                "LLM ReAct Designer (Stress-Constrained L-Bracket)",
-                export_options,
-            )
             self.assertFalse(
                 any("replay_step_slider" in msg for msg in log_messages),
                 msg=f"Unexpected replay_step_slider warnings: {log_messages}",
@@ -991,19 +953,19 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             any("Cantilever Lightweight Bracket" in s.value for s in at.subheader)
         )
 
-        # Try 1: run llm_designer on default cantilever-lightweight
-        at.sidebar.multiselect(key="selected_solvers").set_value(["llm_designer"]).run(
-            timeout=30
-        )
+        # Try 1: run in-repo solvers on default cantilever-lightweight
         at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
         try1_headings = [m.value for m in at.markdown if m.value.startswith("#### ")]
         self.assertEqual(
             try1_headings,
-            ["#### LLM ReAct Designer (`Cantilever Lightweight Bracket`)"],
+            [
+                "#### Reference Solution (`Cantilever Lightweight Bracket`)",
+                "#### SIMP Topology Optimum (Continuous) (`Cantilever Lightweight Bracket`)",
+            ],
         )
         try1_replay_id = at.selectbox(key="replay_solution_selector").value
-        self.assertTrue(str(try1_replay_id).startswith("solver:llm_designer:"))
+        self.assertTrue(str(try1_replay_id).startswith("solver:oracle_solver:"))
 
         # Switch Design Problem to l-bracket-stress before running solvers:
         # Comparison & Replay must immediately switch away from Cantilever
@@ -1022,39 +984,105 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         self.assertNotEqual(switched_replay_id, try1_replay_id)
         self.assertTrue(str(switched_replay_id).startswith("human:"))
 
-        # Try 2: run llm_designer on l-bracket-stress
+        # Try 2: run in-repo solvers on l-bracket-stress
         at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
         self.assertEqual(len(at.exception), 0)
         try2_headings = [m.value for m in at.markdown if m.value.startswith("#### ")]
         self.assertEqual(
             try2_headings,
-            ["#### LLM ReAct Designer (`Stress-Constrained L-Bracket`)"],
+            [
+                "#### Reference Solution (`Stress-Constrained L-Bracket`)",
+                "#### SIMP Topology Optimum (Continuous) (`Stress-Constrained L-Bracket`)",
+            ],
         )
         try2_replay_id = at.selectbox(key="replay_solution_selector").value
         self.assertNotEqual(try2_replay_id, try1_replay_id)
-        self.assertTrue(str(try2_replay_id).startswith("solver:llm_designer:"))
+        self.assertTrue(str(try2_replay_id).startswith("solver:oracle_solver:"))
         self.assertEqual(
             at.session_state["loaded_solutions"][try2_replay_id].problem.name,
             "Stress-Constrained L-Bracket",
         )
-        self.assertIn(
-            "Stress-Constrained L-Bracket",
-            str(at.selectbox(key="export_model_selector").value),
-        )
 
-        # Try 3: override target volume fraction on the same preset and re-run
-        at.sidebar.checkbox(key="override_target_volume").check().run(timeout=30)
-        at.sidebar.slider(key="custom_target_volume").set_value(0.28).run(timeout=30)
-        at.sidebar.button(key="run_solvers_btn").click().run(timeout=60)
-        self.assertEqual(len(at.exception), 0)
-        try3_replay_id = at.selectbox(key="replay_solution_selector").value
-        self.assertNotEqual(try3_replay_id, try2_replay_id)
-        self.assertAlmostEqual(
-            at.session_state["loaded_solutions"][
-                try3_replay_id
-            ].problem.target_volume_fraction,
-            0.28,
-            places=5,
+    def test_cad_canvas_payload_and_polygon_cutout(self) -> None:
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        payload = build_canvas_payload(
+            prob,
+            model,
+            tool="polygon",
+            fillet_radius=0.5,
+            slot_radius=2.5,
+            grid_snap=0.5,
+            problem_key="cantilever",
+        )
+        self.assertEqual(payload["tool"], "polygon")
+        self.assertEqual(len(payload["polygons"]), 1)
+        self.assertGreaterEqual(len(payload["supports"]), 1)
+        self.assertGreaterEqual(len(payload["loads"]), 1)
+
+        ok, err = apply_canvas_action(
+            model,
+            {
+                "type": "polygon",
+                "points": [[20.0, 10.0], [32.0, 10.0], [26.0, 20.0]],
+                "fillet_radius": 0.5,
+            },
+        )
+        self.assertTrue(ok)
+        self.assertIsNone(err)
+        self.assertEqual(len(model.history), 1)
+        self.assertEqual(model.history[0].action_type, "polygon")
+
+        updated_payload = build_canvas_payload(
+            prob,
+            model,
+            tool="circle",
+            fillet_radius=0.0,
+            slot_radius=2.5,
+            grid_snap=0.5,
+            problem_key="cantilever",
+        )
+        self.assertEqual(len(updated_payload["polygons"][0]["holes"]), 1)
+
+        bad_ok, bad_err = apply_canvas_action(
+            model,
+            {
+                "type": "polygon",
+                "points": [[1.0, 1.0], [2.0, 2.0]],
+                "fillet_radius": 0.0,
+            },
+        )
+        self.assertFalse(bad_ok)
+        self.assertIsNotNone(bad_err)
+
+    def test_replay_heatmap_scale_is_constant_across_steps(self) -> None:
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        model.cut_circle(25.0, 15.0, 4.0)
+        model.cut_rect(35.0, 10.0, 8.0, 8.0, fillet_radius=1.0)
+        frames = replay_cutout_history(model)
+        stress_range, strain_range = compute_replay_field_ranges(
+            frames, log_strain=False
+        )
+        v0 = render_solution_views(
+            frames[0],
+            problem=prob,
+            stress_range=stress_range,
+            strain_range=strain_range,
+        )
+        v_last = render_solution_views(
+            frames[-1],
+            problem=prob,
+            stress_range=stress_range,
+            strain_range=strain_range,
+        )
+        self.assertEqual(
+            v0.stress_figure.axes[0].images[0].get_clim(),
+            v_last.stress_figure.axes[0].images[0].get_clim(),
+        )
+        self.assertEqual(
+            v0.strain_figure.axes[0].images[0].get_clim(),
+            v_last.strain_figure.axes[0].images[0].get_clim(),
         )
 
 

@@ -55,6 +55,17 @@ TASK_METADATA = {
             "load case. Preserve triangulated load paths serving both load vectors."
         ),
     },
+    "aerospace-rib-obstacles": {
+        "difficulty": "hard",
+        "expert_min": 45.0,
+        "junior_min": 120.0,
+        "challenge_note": (
+            "Two circular VOID pass-through tunnels at (28, 20) and (54, 20) block the "
+            "mid-web, while THREE independent load cases pull on 3 solid mounting lugs "
+            "at (74, 32), (74, 8), and (42, 35). You must route clean filleted truss "
+            "chords above and below the tunnels while staying <= 35% volume and <= 2.05 stress."
+        ),
+    },
 }
 
 
@@ -100,6 +111,8 @@ mcp_servers = []
 PYTHONPATH = "/opt"
 CAD_PROBLEM_PATH = "/app/problem.json"
 CAD_DESIGN_PATH = "/app/design.json"
+CAD_TIME_LIMIT_SEC = "600"
+CAD_TARGET_FINISH_SEC = "540"
 
 [solution.env]
 PYTHONPATH = "/solution:/opt"

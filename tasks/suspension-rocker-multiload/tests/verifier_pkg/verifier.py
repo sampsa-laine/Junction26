@@ -197,11 +197,12 @@ def score_cad_submission(
     else:
         stress_factor = 1.0
 
+    _, smoothness_factor = model.check_boundary_smoothness()
     if wall_ok:
-        manufacturability_factor = 1.0
+        manufacturability_factor = float(smoothness_factor)
     else:
-        sliver_pen = max(0.55, 1.0 - 2.5 * sliver_ratio)
-        manufacturability_factor = float(0.80 * sliver_pen)
+        sliver_pen = max(0.45, 1.0 - 3.0 * sliver_ratio)
+        manufacturability_factor = float(0.40 * sliver_pen * smoothness_factor)
 
     raw_reward = (
         stiffness_factor * volume_factor * stress_factor * manufacturability_factor
