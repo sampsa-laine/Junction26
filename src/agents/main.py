@@ -4,7 +4,6 @@ import sys
 
 from src.agents.csg import CADModel
 from src.agents.fea import FEASolver
-from src.agents.llm_designer import LLMCADDesigner
 from src.agents.metrics import evaluate_cad_model, evaluate_design
 from src.agents.problem import make_cantilever_beam
 from src.agents.simp import SIMPOptimizer
@@ -37,13 +36,6 @@ def main():
         solver,
     )
 
-    print("2. Running LLM CAD Designer Agent...")
-    llm_designer = LLMCADDesigner(problem)
-    llm_res = llm_designer.design(max_steps=10)
-    score_llm = evaluate_cad_model(
-        "LLM CAD Agent", llm_res.cad_model, problem, simp_res, solver
-    )
-
     # Empty baseline model
     base_model = CADModel(problem)
     score_base = evaluate_cad_model(
@@ -55,7 +47,7 @@ def main():
         f"{'Competitor':<26} | {'Comp (Stiff)':<12} | {'Gap %':<7} | {'Vol %':<7} | {'Score'}"
     )
     print("-" * 65)
-    scores = [score_simp, score_llm, score_base]
+    scores = [score_simp, score_base]
     for s in scores:
         gap_str = (
             "0.0%"

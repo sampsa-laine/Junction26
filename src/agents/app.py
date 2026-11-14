@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-import hashlib
 import io
 import json
 from pathlib import Path
@@ -9,12 +8,9 @@ from matplotlib.figure import Figure
 import streamlit as st
 
 from src.agents.csg import CADModel
-from src.agents.export import export_cad_to_dxf, export_cad_to_svg
-from src.agents.llm_designer import LLMStepRecord
 from src.agents.problem import DesignProblem
 from src.agents.solutions import (
     PROBLEM_PRESETS,
-    InRepoSolverName,
     ReplayFrame,
     SolutionRecord,
     _problem_short_id,
@@ -22,8 +18,6 @@ from src.agents.solutions import (
     build_human_solution,
     discover_harbor_runs,
     get_cached_reference_simp,
-    load_design_payload_solution,
-    load_design_solution,
     load_harbor_trial,
     replay_cutout_history,
     run_in_repo_solver,
@@ -35,12 +29,6 @@ from src.agents.visualizer import (
     render_replay_trajectory_figure,
     render_solution_views,
 )
-
-_SOLVER_LABELS: dict[InRepoSolverName, str] = {
-    "simp": "SIMP (Continuous Optimum)",
-    "oracle_solver": "Oracle Solver (SIMP-to-CAD)",
-    "llm_designer": "LLM Designer (ReAct Agent)",
-}
 
 _HUMAN_SLIDER_KEYS = (
     "human_cx",
@@ -266,10 +254,8 @@ def main() -> None:
 
     if "loaded_solutions" not in st.session_state:
         st.session_state["loaded_solutions"] = {}
-    if "_cleared_upload_keys" not in st.session_state:
-        st.session_state["_cleared_upload_keys"] = set()
 
-    st.sidebar.header("1. Design Problem")
+    st.sidebar.header("Design Problem")
     preset_keys = list(PROBLEM_PRESETS.keys())
     selected_preset_key = st.sidebar.selectbox(
         "Benchmark Task / Preset",
@@ -279,28 +265,6 @@ def main() -> None:
     )
     preset = PROBLEM_PRESETS[selected_preset_key]
     problem = preset.builder()
-
-    prev_preset_key = st.session_state.get("_prev_preset_key")
-    if prev_preset_key is not None and prev_preset_key != selected_preset_key:
-        st.session_state.pop("custom_target_volume", None)
-    st.session_state["_prev_preset_key"] = selected_preset_key
-
-    override_vol = st.sidebar.checkbox(
-        "Override Target Volume Fraction",
-        value=False,
-        key="override_target_volume",
-    )
-    if override_vol:
-        problem.target_volume_fraction = float(
-            st.sidebar.slider(
-                "Custom Target Volume Fraction",
-                min_value=0.20,
-                max_value=0.70,
-                value=float(problem.target_volume_fraction),
-                step=0.01,
-                key="custom_target_volume",
-            )
-        )
 
     num_cases = len(problem.effective_load_cases)
     stress_note = (
@@ -336,84 +300,10 @@ def main() -> None:
                     fallback_id=f"human:{_problem_short_id(problem)}",
                 )
             )
-            st.session_state.pop("export_model_selector", None)
 
-    st.sidebar.header("2. View & FEA Controls")
-    max_cases = max(
-        [
-            num_cases,
-            *(
-                len(sol.problem.effective_load_cases)
-                for sol in st.session_state["loaded_solutions"].values()
-            ),
-        ]
-    )
-    case_options: list[int | None] = [None, *range(max_cases)]
-    if (
-        "load_case_selector" in st.session_state
-        and st.session_state["load_case_selector"] not in case_options
-    ):
-        st.session_state["load_case_selector"] = None
-    selected_load_case = st.sidebar.selectbox(
-        "Load Case View",
-        options=case_options,
-        format_func=lambda idx: (
-            "All Cases (Envelope / Sum)" if idx is None else f"Load Case {idx + 1}"
-        ),
-        key="load_case_selector",
-    )
-    log_strain = st.sidebar.checkbox(
-        "Log-Scale Strain Energy", value=False, key="log_strain"
-    )
+    selected_load_case: int | None = None
 
-    st.sidebar.header("3. In-Repo Solvers")
-    solver_keys: list[InRepoSolverName] = [
-        "simp",
-        "oracle_solver",
-        "llm_designer",
-    ]
-    selected_solvers = st.sidebar.multiselect(
-        "Solvers to Run",
-        options=solver_keys,
-        default=solver_keys,
-        format_func=lambda key: _SOLVER_LABELS[key],
-        key="selected_solvers",
-    )
-    if st.sidebar.button(
-        "🚀 Run In-Repo Solvers", type="primary", key="run_solvers_btn"
-    ):
-        stale_solver_ids = [
-            sid
-            for sid, sol in st.session_state["loaded_solutions"].items()
-            if sol.source_kind == "in_repo_solver"
-            and _problem_signature(sol.problem) == prob_sig
-        ]
-        for sid in stale_solver_ids:
-            st.session_state["loaded_solutions"].pop(sid, None)
-
-        newly_run_records: list[SolutionRecord] = []
-        if "simp" in selected_solvers:
-            simp_record = run_in_repo_solver(problem, "simp")
-            st.session_state["loaded_solutions"][simp_record.solution_id] = simp_record
-            newly_run_records.append(simp_record)
-            ref_simp = get_cached_reference_simp(problem)
-        else:
-            ref_simp = get_cached_reference_simp(problem)
-
-        for s_key in selected_solvers:
-            if s_key == "simp":
-                continue
-            sol_record = run_in_repo_solver(problem, s_key, reference_simp=ref_simp)
-            st.session_state["loaded_solutions"][sol_record.solution_id] = sol_record
-            newly_run_records.append(sol_record)
-
-        if newly_run_records:
-            _set_active_replay_selection(
-                _preferred_replay_solution_id(newly_run_records)
-            )
-            st.session_state.pop("export_model_selector", None)
-
-    st.sidebar.header("4. Harbor Runs & Design Files")
+    st.sidebar.header("Agent Solution")
     discovered_paths = discover_harbor_runs("jobs")
     filter_to_task = st.sidebar.checkbox(
         "Filter Harbor runs to current task",
@@ -453,65 +343,6 @@ def main() -> None:
             except Exception as exc:
                 st.sidebar.error(f"Failed to load {t_str}: {exc}")
 
-    custom_path_str = st.sidebar.text_input(
-        "Custom Trial Dir or design.json Path",
-        value="",
-        key="custom_solution_path",
-    )
-    if st.sidebar.button("📂 Load Custom Path", key="load_custom_path_btn"):
-        cleaned_path = custom_path_str.strip()
-        if cleaned_path:
-            c_path = Path(cleaned_path)
-            try:
-                if c_path.is_dir():
-                    trials = discover_harbor_runs(c_path)
-                    targets = trials if trials else [c_path]
-                    for target_dir in targets:
-                        rec = load_harbor_trial(target_dir)
-                        st.session_state["loaded_solutions"].pop(rec.solution_id, None)
-                        st.session_state["loaded_solutions"][rec.solution_id] = rec
-                        newly_loaded_external.append(rec)
-                else:
-                    try:
-                        rec = load_design_solution(c_path)
-                    except ValueError:
-                        rec = load_design_solution(c_path, problem=problem)
-                    st.session_state["loaded_solutions"].pop(rec.solution_id, None)
-                    st.session_state["loaded_solutions"][rec.solution_id] = rec
-                    newly_loaded_external.append(rec)
-            except Exception as exc:
-                st.sidebar.error(f"Could not load {cleaned_path}: {exc}")
-
-    uploaded_file = st.sidebar.file_uploader(
-        "Upload design.json", type=["json"], key="upload_design_json"
-    )
-    active_upload_key: str | None = None
-    if uploaded_file is not None:
-        raw_bytes = uploaded_file.getvalue()
-        content_digest = hashlib.sha256(raw_bytes).hexdigest()[:12]
-        active_upload_key = f"uploaded:{uploaded_file.name}:{content_digest}"
-        if (
-            active_upload_key not in st.session_state["loaded_solutions"]
-            and active_upload_key not in st.session_state["_cleared_upload_keys"]
-        ):
-            try:
-                payload = json.loads(raw_bytes.decode("utf-8"))
-                try:
-                    rec = load_design_payload_solution(
-                        payload, label=f"Uploaded ({uploaded_file.name})"
-                    )
-                except ValueError:
-                    rec = load_design_payload_solution(
-                        payload,
-                        problem=problem,
-                        label=f"Uploaded ({uploaded_file.name})",
-                    )
-                rec.solution_id = active_upload_key
-                st.session_state["loaded_solutions"][active_upload_key] = rec
-                newly_loaded_external.append(rec)
-            except Exception as exc:
-                st.sidebar.error(f"Invalid design.json upload: {exc}")
-
     if newly_loaded_external:
         if any(
             _problem_signature(rec.problem) != prob_sig for rec in newly_loaded_external
@@ -520,40 +351,42 @@ def main() -> None:
         _set_active_replay_selection(
             _preferred_replay_solution_id(newly_loaded_external)
         )
-        st.session_state.pop("export_model_selector", None)
 
-    if st.sidebar.button("🗑️ Clear Loaded Solutions", key="clear_solutions_btn"):
-        if active_upload_key is not None:
-            st.session_state["_cleared_upload_keys"].add(active_upload_key)
-        st.session_state["loaded_solutions"] = {}
-        st.session_state.pop("_replay_frames_cache", None)
-        st.session_state.pop("_plot_png_cache", None)
-        st.session_state.pop("active_replay_model", None)
-        st.session_state.pop("active_replay_label", None)
-        st.session_state.pop("replay_solution_selector", None)
-        st.session_state.pop("export_model_selector", None)
-
-    updated_max_cases = max(
-        [
-            num_cases,
-            *(
-                len(sol.problem.effective_load_cases)
-                for sol in st.session_state["loaded_solutions"].values()
-            ),
+    if st.sidebar.button(
+        "🚀 Run In-Repo Solvers", type="primary", key="run_solvers_btn"
+    ):
+        stale_solver_ids = [
+            sid
+            for sid, sol in st.session_state["loaded_solutions"].items()
+            if sol.source_kind == "in_repo_solver"
+            and _problem_signature(sol.problem) == prob_sig
         ]
+        for sid in stale_solver_ids:
+            st.session_state["loaded_solutions"].pop(sid, None)
+
+        simp_record = run_in_repo_solver(problem, "simp")
+        st.session_state["loaded_solutions"][simp_record.solution_id] = simp_record
+        ref_simp = get_cached_reference_simp(problem)
+        oracle_record = run_in_repo_solver(
+            problem, "oracle_solver", reference_simp=ref_simp
+        )
+        st.session_state["loaded_solutions"][oracle_record.solution_id] = oracle_record
+        _set_active_replay_selection(
+            _preferred_replay_solution_id([simp_record, oracle_record])
+        )
+
+    log_strain = st.sidebar.checkbox(
+        "Log-Scale Strain Energy", value=False, key="log_strain"
     )
-    if updated_max_cases != max_cases:
-        st.rerun()
 
     loaded_solutions: dict[str, SolutionRecord] = st.session_state["loaded_solutions"]
     human_model: CADModel = st.session_state["human_model"]
 
-    tab_compare, tab_replay, tab_human, tab_export = st.tabs(
+    tab_compare, tab_replay, tab_human = st.tabs(
         [
             "🔍 Solution Comparison & Inspection",
             "⏪ Cutout History Replay",
-            "✏️ Human Canvas & LLM Log",
-            "💾 CAD Export",
+            "✏️ Human Canvas",
         ]
     )
 
@@ -673,8 +506,8 @@ def main() -> None:
                 log_strain=log_strain,
             )
             st.info(
-                "Use the sidebar to run in-repo solvers (`SIMP`, `Oracle`, `Heuristic`, `LLM`) "
-                "or load Harbor benchmark trials (`jobs/`) and `design.json` artifacts."
+                "Use the sidebar to load a Harbor agent solution (`jobs/`) "
+                "or run the in-repo solvers (`SIMP`, `Oracle`)."
             )
 
     with tab_replay:
@@ -740,8 +573,8 @@ def main() -> None:
             st.session_state.pop("_replay_slider_max", None)
             st.info(
                 "Continuous SIMP density solutions do not contain parametric CSG `CutoutAction` history. "
-                "Select a parametric `CADModel` solution (Harbor trial, Oracle Solver, Heuristic Agent, "
-                "LLM Designer, or `design.json`) to step through cutouts `0..N`."
+                "Select a parametric `CADModel` solution (Harbor agent solution, Oracle Solver, "
+                "or Human Designer) to step through cutouts `0..N`."
             )
         else:
             cad_target = replay_sol.cad_model
@@ -1013,116 +846,6 @@ def main() -> None:
                     False,
                 ),
             )
-
-        st.divider()
-        st.subheader("🧠 LLM Designer Reasoning Transcript")
-        llm_records = [
-            sol
-            for sol in loaded_solutions.values()
-            if sol.solver_name == "llm_designer"
-            and sol.metadata.get("transcript")
-            and _problem_signature(sol.problem) == prob_sig
-        ]
-        if llm_records:
-            latest_llm = llm_records[-1]
-            transcript: list[LLMStepRecord] = latest_llm.metadata["transcript"]
-            for step_rec in transcript:
-                with st.expander(
-                    f"Step {step_rec.step}: {step_rec.action}", expanded=True
-                ):
-                    st.markdown(f"**Thought**: {step_rec.thought}")
-                    st.caption(
-                        f"Compliance: {step_rec.compliance:.3f} | Volume Fraction: {step_rec.volume_fraction:.3f}"
-                    )
-        else:
-            st.info(
-                "Run `LLM Designer` from the sidebar to inspect its step-by-step ReAct reasoning transcript."
-            )
-
-    with tab_export:
-        st.subheader("💾 CAD Vector & Artifact Export")
-        exportable_models: dict[str, CADModel] = {}
-        cad_solutions = [
-            sol for sol in loaded_solutions.values() if sol.cad_model is not None
-        ]
-        label_counts: dict[str, int] = {}
-        distinct_problems: set[str] = set()
-        for sol in cad_solutions:
-            label_counts[sol.label] = label_counts.get(sol.label, 0) + 1
-            distinct_problems.add(sol.problem.name)
-        for sol in cad_solutions:
-            assert sol.cad_model is not None
-            base_export_key = (
-                f"{sol.label} ({sol.problem.name})"
-                if label_counts[sol.label] > 1 or len(distinct_problems) > 1
-                else sol.label
-            )
-            export_key = base_export_key
-            suffix = 2
-            while export_key in exportable_models:
-                export_key = f"{base_export_key} [{suffix}]"
-                suffix += 1
-            exportable_models[export_key] = sol.cad_model
-        if "active_replay_model" in st.session_state:
-            replay_lbl = st.session_state.get(
-                "active_replay_label", "Active Replayed Step"
-            )
-            exportable_models[f"Replay: {replay_lbl}"] = st.session_state[
-                "active_replay_model"
-            ]
-        exportable_models["Human Designer Canvas"] = human_model
-        export_keys = list(exportable_models.keys())
-        default_export_idx = 0
-        for idx, ek in enumerate(export_keys):
-            if (
-                ek != "Human Designer Canvas"
-                and not ek.startswith("Replay: ")
-                and _problem_signature(exportable_models[ek].problem) == prob_sig
-            ):
-                default_export_idx = idx
-                break
-        else:
-            if "Human Designer Canvas" in exportable_models:
-                default_export_idx = export_keys.index("Human Designer Canvas")
-
-        if (
-            "export_model_selector" in st.session_state
-            and st.session_state["export_model_selector"] not in exportable_models
-        ):
-            st.session_state["export_model_selector"] = export_keys[default_export_idx]
-
-        chosen_export_label = st.selectbox(
-            "Select Parametric CADModel to Export",
-            options=export_keys,
-            index=default_export_idx,
-            key="export_model_selector",
-        )
-        export_target = exportable_models[chosen_export_label]
-        slug = export_target.problem.name.lower().replace(" ", "_")
-
-        svg_str = export_cad_to_svg(export_target)
-        dxf_str = export_cad_to_dxf(export_target)
-        json_str = json.dumps(export_target.to_dict(), indent=2)
-
-        e1, e2, e3 = st.columns(3)
-        e1.download_button(
-            "⬇️ Download SVG Vector",
-            svg_str,
-            file_name=f"{slug}.svg",
-            mime="image/svg+xml",
-        )
-        e2.download_button(
-            "⬇️ Download DXF (AutoCAD R12)",
-            dxf_str,
-            file_name=f"{slug}.dxf",
-            mime="application/dxf",
-        )
-        e3.download_button(
-            "⬇️ Download design.json",
-            json_str,
-            file_name="design.json",
-            mime="application/json",
-        )
 
 
 if __name__ == "__main__":

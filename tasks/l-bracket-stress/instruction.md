@@ -49,20 +49,10 @@ cad-sim reset
 cad-sim export --svg /app/design.svg --dxf /app/design.dxf
 ```
 
-<<<<<<< HEAD
-
-
-### Time Budget & Fast Workflow Tips (10-Minute Hard Limit — Finish in <= 9 Minutes)
-- **Hard 10-minute timeout (`600s`) — finish within `9` minutes (`540s`)**: Your session will be forcefully terminated at **10 minutes**. Budget your time so you finalize `/app/design.json` and **stop within 9 minutes** (leaving a 60s safety margin). `cad-sim` also displays your elapsed time and remaining 9-minute budget on each run; if you reach ~8–9 minutes, stop iterating immediately and keep your best valid `/app/design.json`.
-- **Save early, update often**: Write a valid, connected `/app/design.json` within your first 2–3 steps, and overwrite `/app/design.json` immediately whenever you find an improved valid design.
-- **Keep scripts fast (`< 5s`)**: Each `FEASolver.solve()` takes ~15ms, so keep any Python search/optimization script under **150–200 evaluations** (use `model.to_density_grid(subgrid=1)` during fast inner loops, then verify once with `inspect_design()`). Avoid long `scipy.optimize` sweeps or writing many successive refinement scripts.
-- **Stop once satisfied**: Once you hit the target volume fraction, stress limit, wall-thickness check, and strong stiffness, save `/app/design.json` and finish.
-=======
 ### Workflow Tips
 - **Use physics-guided cuts**: Inspect `cad-sim status --ascii` to see high-stress load paths (`9`/`#`), low-strain pockets (`1`/`2`), and `Low-Strain Zones`, then place/adjust cutouts intentionally.
 - **Batch multiple cuts in one shell command when helpful**: You can chain planned cuts (e.g., `cad-sim cut-polygon ... && cad-sim cut-circle ... && cad-sim status --ascii`) to reduce round-trips.
 - **Stop once satisfied**: Once `/app/design.json` meets the target volume fraction, stress limit, connectivity, and wall-thickness checks with strong stiffness, finish.
->>>>>>> origin/rasmus3
 
 ---
 

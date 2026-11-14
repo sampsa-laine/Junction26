@@ -17,7 +17,6 @@ Frontend and CLI environment for evaluating, comparing, and replaying 2D structu
 | **Harbor Trials** | `jobs/<job>/<trial>/` or `design.json` | Parametric CSG (`CADModel`) | Steps `0..N` |
 | **SIMP** | `simp` (`SIMPOptimizer`) | Continuous `(ny, nx)` density | N/A (continuous) |
 | **Oracle Solver** | `oracle_solver` (`ParametricCADOptimizer`) | Parametric CSG (`CADModel`) | Steps `0..N` |
-| **LLM Designer** | `llm_designer` (`LLMCADDesigner`) | Parametric CSG (`CADModel`) + ReAct log | Steps `0..N` |
 | **Human Canvas** | Interactive Streamlit tools | Parametric CSG (`CADModel`) | Steps `0..N` |
 
 ## Inspector Tabs & Views
@@ -41,7 +40,6 @@ Frontend and CLI environment for evaluating, comparing, and replaying 2D structu
 - `cad_cli.py`: Sandbox `cad-sim` CLI and `cad_env` SDK.
 - `verifier.py`: Continuous `[0.0, 1.0]` Harbor reward scorer.
 - `oracle_solver.py`: Reference SIMP-to-CAD parametric fitter.
-- `llm_designer.py`: ReAct CAD agent loop.
 - `metrics.py`: Arena composite scoreboard (`[0, 100]`, IoU, SIMP gap).
 - `export.py`: DXF and SVG vector exporters.
 - `harbor_sync.py`: Standalone Harbor v1.4 task generator and runner.
