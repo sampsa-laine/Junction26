@@ -28,10 +28,10 @@ _CAD_CANVAS_HTML = """
 _CAD_CANVAS_CSS = """
 .cad-canvas-wrap {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  border: 1px solid rgba(128, 128, 128, 0.25);
+  border: 1px solid #1e293b;
   border-radius: 8px;
   padding: 8px 10px;
-  background: #ffffff;
+  background: #0f172a;
 }
 .cad-toolbar {
   display: flex;
@@ -44,7 +44,7 @@ _CAD_CANVAS_CSS = """
 .cad-status {
   font-size: 12.5px;
   font-weight: 600;
-  color: #1e293b;
+  color: #f8fafc;
   font-variant-numeric: tabular-nums;
 }
 .cad-actions {
@@ -56,21 +56,21 @@ _CAD_CANVAS_CSS = """
   font-weight: 500;
   padding: 3px 9px;
   border-radius: 5px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  color: #1e293b;
+  border: 1px solid #334155;
+  background: #162033;
+  color: #e2e8f0;
   cursor: pointer;
 }
 .cad-btn:hover {
-  background: #e2e8f0;
+  background: #1e293b;
 }
 .cad-btn-primary {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  border-color: #3b82f6;
   color: #ffffff;
 }
 .cad-btn-primary:hover {
-  background: #1d4ed8;
+  background: linear-gradient(90deg, #1d4ed8, #2563eb);
 }
 #cad-canvas {
   display: block;
@@ -83,7 +83,7 @@ _CAD_CANVAS_CSS = """
 .cad-hint {
   margin-top: 5px;
   font-size: 11.5px;
-  color: #64748b;
+  color: #94a3b8;
 }
 """
 
@@ -235,24 +235,24 @@ export default function(component) {
     ctx.scale(dpr, dpr);
 
     // Background
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#0f172a";
     ctx.fillRect(0, 0, L.cw, L.ch);
 
     // Plot background
-    ctx.fillStyle = "#f8fafc";
+    ctx.fillStyle = "#0b1120";
     ctx.fillRect(PAD_L, PAD_T, L.plotW, L.plotH);
 
     // Grid lines
     const step = L.w >= 80 ? 10 : 5;
     ctx.lineWidth = 1;
     ctx.font = "11px -apple-system, BlinkMacSystemFont, sans-serif";
-    ctx.fillStyle = "#475569";
+    ctx.fillStyle = "#94a3b8";
 
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     for (let gx = 0; gx <= L.w + 1e-6; gx += step) {
       const p = worldToPx(gx, 0, L);
-      ctx.strokeStyle = "#e2e8f0";
+      ctx.strokeStyle = "#1b2038";
       ctx.beginPath();
       ctx.moveTo(p.x, PAD_T);
       ctx.lineTo(p.x, PAD_T + L.plotH);
@@ -264,7 +264,7 @@ export default function(component) {
     ctx.textBaseline = "middle";
     for (let gy = 0; gy <= L.h + 1e-6; gy += step) {
       const p = worldToPx(0, gy, L);
-      ctx.strokeStyle = "#e2e8f0";
+      ctx.strokeStyle = "#1b2038";
       ctx.beginPath();
       ctx.moveTo(PAD_L, p.y);
       ctx.lineTo(PAD_L + L.plotW, p.y);
@@ -300,8 +300,8 @@ export default function(component) {
 
     // Material geometry (outer rings + cutouts as holes)
     ctx.save();
-    ctx.fillStyle = "rgba(59, 130, 246, 0.24)";
-    ctx.strokeStyle = "#1d4ed8";
+    ctx.fillStyle = "rgba(139, 155, 180, 0.52)";
+    ctx.strokeStyle = "#cbd5e1";
     ctx.lineWidth = 2;
     for (const poly of state.data.polygons) {
       ctx.beginPath();
@@ -328,8 +328,8 @@ export default function(component) {
     for (const ko of state.data.keepouts) {
       if (ko.type !== "solid") continue;
       ctx.save();
-      ctx.fillStyle = "rgba(16, 185, 129, 0.18)";
-      ctx.strokeStyle = "rgba(5, 150, 105, 0.75)";
+      ctx.fillStyle = "rgba(192, 132, 252, 0.16)";
+      ctx.strokeStyle = "rgba(192, 132, 252, 0.75)";
       ctx.setLineDash([4, 3]);
       ctx.lineWidth = 1.5;
       if (ko.shape === "rect") {
@@ -350,38 +350,82 @@ export default function(component) {
       ctx.restore();
     }
 
-    // Supports
-    for (const s of state.data.supports) {
-      const p = worldToPx(s.x, s.y, L);
-      ctx.fillStyle = "#059669";
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y - 5);
-      ctx.lineTo(p.x - 5, p.y + 5);
-      ctx.lineTo(p.x + 5, p.y + 5);
-      ctx.closePath();
-      ctx.fill();
+    // Supports (opaque unified stadium bar)
+    if (state.data.supports.length > 0) {
+      const sups = state.data.supports;
+      const used = new Set();
+      for (let i = 0; i < sups.length; i++) {
+        if (used.has(i)) continue;
+        const s = sups[i];
+        const sameX = [];
+        const sameY = [];
+        for (let j = 0; j < sups.length; j++) {
+          if (used.has(j)) continue;
+          if (Math.abs(sups[j].x - s.x) < 1e-3) sameX.push(j);
+          if (Math.abs(sups[j].y - s.y) < 1e-3) sameY.push(j);
+        }
+        const grp = sameX.length >= sameY.length ? sameX : sameY;
+        grp.forEach((idx) => used.add(idx));
+        const pts = grp.map((idx) => sups[idx]).sort((a, b) => (a.x - b.x) || (a.y - b.y));
+        const pStart = worldToPx(pts[0].x, pts[0].y, L);
+        const pEnd = worldToPx(pts[pts.length - 1].x, pts[pts.length - 1].y, L);
+        const barW = Math.max(12, ((s.tolerance || 1.0) / L.w) * L.plotW * 2);
+
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.strokeStyle = "#07080f";
+        ctx.lineWidth = barW + 3;
+        ctx.beginPath();
+        ctx.moveTo(pStart.x, pStart.y);
+        ctx.lineTo(pEnd.x, pEnd.y);
+        ctx.stroke();
+
+        ctx.strokeStyle = "#00f5ff";
+        ctx.lineWidth = barW;
+        ctx.beginPath();
+        ctx.moveTo(pStart.x, pStart.y);
+        ctx.lineTo(pEnd.x, pEnd.y);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
-    // Loads
+    // Loads (bright, slim, sharp force vectors)
     for (const ld of state.data.loads) {
       const p = worldToPx(ld.x, ld.y, L);
       const mag = Math.hypot(ld.fx, ld.fy) || 1;
-      const dx = (ld.fx / mag) * 24;
-      const dy = -(ld.fy / mag) * 24;
-      ctx.strokeStyle = "#dc2626";
-      ctx.fillStyle = "#dc2626";
-      ctx.lineWidth = 2.2;
+      const dx = (ld.fx / mag) * 38;
+      const dy = -(ld.fy / mag) * 38;
+      const ang = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.lineJoin = "miter";
+      ctx.lineCap = "butt";
+
+      // Sharp dark outline
+      ctx.strokeStyle = "#07080f";
+      ctx.lineWidth = 3.6;
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
-      ctx.lineTo(p.x + dx, p.y + dy);
+      ctx.lineTo(p.x + dx - 7 * Math.cos(ang), p.y + dy - 7 * Math.sin(ang));
       ctx.stroke();
-      const ang = Math.atan2(dy, dx);
+
+      // Bright neon pink/magenta slim shaft + crisp arrowhead
+      ctx.strokeStyle = "#ff2a85";
+      ctx.fillStyle = "#ff2a85";
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + dx - 7 * Math.cos(ang), p.y + dy - 7 * Math.sin(ang));
+      ctx.stroke();
+
       ctx.beginPath();
       ctx.moveTo(p.x + dx, p.y + dy);
-      ctx.lineTo(p.x + dx - 7 * Math.cos(ang - 0.45), p.y + dy - 7 * Math.sin(ang - 0.45));
-      ctx.lineTo(p.x + dx - 7 * Math.cos(ang + 0.45), p.y + dy - 7 * Math.sin(ang + 0.45));
+      ctx.lineTo(p.x + dx - 10 * Math.cos(ang - 0.34), p.y + dy - 10 * Math.sin(ang - 0.34));
+      ctx.lineTo(p.x + dx - 10 * Math.cos(ang + 0.34), p.y + dy - 10 * Math.sin(ang + 0.34));
       ctx.closePath();
       ctx.fill();
+      ctx.restore();
     }
 
     // Active tool preview
@@ -409,7 +453,7 @@ export default function(component) {
 
       state.polyPts.forEach((pt, idx) => {
         const p = worldToPx(pt.x, pt.y, L);
-        ctx.fillStyle = idx === 0 ? "#16a34a" : "#dc2626";
+        ctx.fillStyle = idx === 0 ? "#facc15" : "#ec4899";
         ctx.beginPath();
         ctx.arc(p.x, p.y, idx === 0 ? 5 : 4, 0, Math.PI * 2);
         ctx.fill();
@@ -419,7 +463,7 @@ export default function(component) {
         const p0 = worldToPx(state.polyPts[0].x, state.polyPts[0].y, L);
         const ph = worldToPx(state.hoverWorld.x, state.hoverWorld.y, L);
         if (Math.hypot(ph.x - p0.x, ph.y - p0.y) <= 12) {
-          ctx.strokeStyle = "#16a34a";
+          ctx.strokeStyle = "#facc15";
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(p0.x, p0.y, 9, 0, Math.PI * 2);
@@ -463,7 +507,7 @@ export default function(component) {
     }
 
     // Plot border
-    ctx.strokeStyle = "#94a3b8";
+    ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 1.2;
     ctx.strokeRect(PAD_L, PAD_T, L.plotW, L.plotH);
 
@@ -471,7 +515,7 @@ export default function(component) {
     if (state.hoverWorld) {
       const cp = worldToPx(state.hoverWorld.x, state.hoverWorld.y, L);
       ctx.save();
-      ctx.strokeStyle = "rgba(15, 23, 42, 0.45)";
+      ctx.strokeStyle = "rgba(96, 165, 250, 0.78)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
@@ -487,9 +531,13 @@ export default function(component) {
       const th = 20;
       const bx = cp.x + tw + 14 > PAD_L + L.plotW ? cp.x - tw - 8 : cp.x + 8;
       const by = cp.y - th - 8 < PAD_T ? cp.y + 8 : cp.y - th - 8;
-      ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      ctx.fillStyle = "rgba(15, 23, 42, 0.94)";
       ctx.fillRect(bx, by, tw, th);
-      ctx.fillStyle = "#ffffff";
+      ctx.setLineDash([]);
+      ctx.strokeStyle = "#60a5fa";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, tw, th);
+      ctx.fillStyle = "#f8fafc";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillText(label, bx + 5, by + th / 2);
@@ -702,7 +750,10 @@ def build_canvas_payload(
         }
         for ko in problem.keepouts
     ]
-    supports = [{"x": float(s.x), "y": float(s.y)} for s in problem.supports]
+    supports = [
+        {"x": float(s.x), "y": float(s.y), "tolerance": float(s.tolerance)}
+        for s in problem.supports
+    ]
     loads = [
         {
             "x": float(ld.x),

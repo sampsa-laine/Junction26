@@ -30,6 +30,7 @@ from src.agents.solutions import (
 )
 from src.agents.visualizer import (
     compute_load_case_fea,
+    compute_replay_field_ranges,
     render_fea_field_figure,
     render_model_geometry_figure,
     render_replay_trajectory_figure,
@@ -225,6 +226,8 @@ def _render_three_panel_views(
     log_strain: bool,
     highlight_cutout: bool = True,
     cache_key: tuple[Any, ...] | None = None,
+    stress_range: tuple[float, float] | None = None,
+    strain_range: tuple[float, float] | None = None,
 ) -> None:
     effective_case = _clamp_load_case_index(problem, load_case_index)
     png_cache: dict[tuple[Any, ...], tuple[bytes, bytes, bytes]] = (
@@ -238,6 +241,8 @@ def _render_three_panel_views(
             load_case_index=effective_case,
             log_strain=log_strain,
             highlight_cutout=highlight_cutout,
+            stress_range=stress_range,
+            strain_range=strain_range,
         )
         cached_pngs = (
             _figure_to_png_bytes(views.model_figure),
@@ -265,15 +270,83 @@ def main() -> None:
         """
         <style>
         [data-testid='stStatusWidget'] { display: none !important; }
-        .block-container { padding-top: 2rem; }
+        .stApp {
+            background: radial-gradient(circle at 14% 0%, rgba(56, 189, 248, 0.08), transparent 38%),
+                        radial-gradient(circle at 86% 4%, rgba(59, 130, 246, 0.08), transparent 36%),
+                        #0b1120;
+            color: #f1f5f9;
+        }
+        [data-testid='stHeader'] {
+            background: rgba(11, 17, 32, 0.88);
+            border-bottom: 1px solid #1e293b;
+        }
+        [data-testid='stSidebar'] {
+            background: #0f172a;
+            border-right: 1px solid #1e293b;
+        }
+        [data-testid='stSidebar'] * {
+            color: #e2e8f0;
+        }
+        .block-container {
+            padding-top: 2rem;
+        }
+        h1 {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+            letter-spacing: -0.02em;
+        }
+        h2, h3, h4, h5 {
+            color: #f8fafc !important;
+        }
+        strong, b {
+            color: #60a5fa;
+        }
         [data-testid='stMetric'] {
-            border: 1px solid rgba(128, 128, 128, 0.22);
-            border-radius: 8px;
+            border: 1px solid rgba(96, 165, 250, 0.28);
+            border-radius: 10px;
             padding: 0.65rem 0.9rem;
-            background-color: rgba(128, 128, 128, 0.04);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.10), rgba(226, 232, 240, 0.04));
+            box-shadow: 0 0 18px rgba(59, 130, 246, 0.08);
+        }
+        [data-testid='stMetricLabel'] {
+            color: #94a3b8 !important;
+        }
+        [data-testid='stMetricValue'] {
+            color: #f8fafc !important;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            border-bottom: 1px solid #1e293b;
         }
         .stTabs [data-baseweb="tab"] {
             font-weight: 600;
+            color: #94a3b8;
+        }
+        .stTabs [aria-selected="true"] {
+            color: #60a5fa !important;
+            border-bottom-color: #60a5fa !important;
+        }
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
+            border: none;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 0 14px rgba(59, 130, 246, 0.30);
+        }
+        .stButton > button[kind="primary"]:hover {
+            background: linear-gradient(90deg, #1d4ed8, #2563eb);
+        }
+        [data-testid='stTable'] table {
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+        [data-testid='stTable'] th {
+            background-color: #162033 !important;
+            color: #60a5fa !important;
+            border-color: #1e293b !important;
+        }
+        [data-testid='stTable'] td {
+            border-color: #1e293b !important;
         }
         </style>
         """,
@@ -721,12 +794,17 @@ def main() -> None:
 
             replay_prob_sig = _problem_signature(replay_sol.problem)
             replay_hist_sig = _history_signature(cad_target)
+            stress_range, strain_range = compute_replay_field_ranges(
+                frames, log_strain=log_strain
+            )
             _render_three_panel_views(
                 current_frame,
                 problem=replay_sol.problem,
                 load_case_index=effective_replay_case,
                 log_strain=log_strain,
                 highlight_cutout=True,
+                stress_range=stress_range,
+                strain_range=strain_range,
                 cache_key=(
                     "replay_frame",
                     selected_replay_id,
@@ -736,6 +814,8 @@ def main() -> None:
                     effective_replay_case,
                     log_strain,
                     True,
+                    stress_range,
+                    strain_range,
                 ),
             )
 

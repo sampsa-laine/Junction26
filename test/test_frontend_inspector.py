@@ -41,6 +41,7 @@ from src.agents.solutions import (
 from src.agents.verifier import score_cad_submission
 from src.agents.visualizer import (
     compute_load_case_fea,
+    compute_replay_field_ranges,
     render_fea_field_figure,
     render_model_geometry_figure,
     render_replay_trajectory_figure,
@@ -1053,6 +1054,36 @@ class TestStreamlitFrontendApp(unittest.TestCase):
         )
         self.assertFalse(bad_ok)
         self.assertIsNotNone(bad_err)
+
+    def test_replay_heatmap_scale_is_constant_across_steps(self) -> None:
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        model.cut_circle(25.0, 15.0, 4.0)
+        model.cut_rect(35.0, 10.0, 8.0, 8.0, fillet_radius=1.0)
+        frames = replay_cutout_history(model)
+        stress_range, strain_range = compute_replay_field_ranges(
+            frames, log_strain=False
+        )
+        v0 = render_solution_views(
+            frames[0],
+            problem=prob,
+            stress_range=stress_range,
+            strain_range=strain_range,
+        )
+        v_last = render_solution_views(
+            frames[-1],
+            problem=prob,
+            stress_range=stress_range,
+            strain_range=strain_range,
+        )
+        self.assertEqual(
+            v0.stress_figure.axes[0].images[0].get_clim(),
+            v_last.stress_figure.axes[0].images[0].get_clim(),
+        )
+        self.assertEqual(
+            v0.strain_figure.axes[0].images[0].get_clim(),
+            v_last.strain_figure.axes[0].images[0].get_clim(),
+        )
 
 
 if __name__ == "__main__":
