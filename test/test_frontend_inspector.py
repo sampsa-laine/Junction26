@@ -207,7 +207,8 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
         )
 
         self.assertIsNone(simp_rec.cad_model)
-        self.assertIsNone(simp_rec.verification)
+        self.assertIsNotNone(simp_rec.verification)
+        self.assertIsNotNone(simp_rec.harbor_reward)
         self.assertEqual(simp_rec.density.shape, (problem.ny, problem.nx))
 
         for csg_rec in (oracle_rec, llm_rec):
@@ -236,7 +237,8 @@ class TestSolutionLoadingAndComparison(unittest.TestCase):
 
         rows = build_comparison_rows([simp_rec, oracle_rec, llm_rec])
         self.assertEqual(len(rows), 3)
-        self.assertEqual(rows[0]["Harbor Reward"], "N/A (Non-CAD)")
+        self.assertNotEqual(rows[0]["Harbor Reward"], "N/A (Non-CAD)")
+        self.assertGreater(float(rows[0]["Harbor Reward"]), 0.0)
 
     def test_multi_regime_verifier_parity_and_defensive_loading(self) -> None:
         cantilever = make_harbor_cantilever()

@@ -601,9 +601,27 @@ def main() -> None:
             st.table(rows)
 
             st.subheader("🔬 Resulting Model, Stress & Strain Inspection")
+            with st.expander(
+                "ℹ️ How Harbor Reward & Its 4 Factors Are Calculated",
+                expanded=False,
+            ):
+                st.markdown(
+                    "**Harbor Reward** (`[0.0, 1.0]`) is the product of four factors "
+                    "(`Stiffness × Weight × Stress × Manufacturability`), after hard validity "
+                    "gates (`>= 2%` area removed, feature limits, connected load path):\n"
+                    "- **Stiffness Factor**: `(C* / vol_adjusted_compliance)^0.75`, comparing "
+                    "stiffness against the continuous SIMP optimum `C*`.\n"
+                    "- **Weight Factor**: `1.0` when `volume <= target + 0.005`, otherwise "
+                    "quadratically penalized for exceeding the mass budget.\n"
+                    "- **Stress Factor**: `1.0` when `max_von_mises <= limit` (or unconstrained), "
+                    "otherwise `(limit / max_vm)^1.5` (floored at `0.20`).\n"
+                    "- **Manufacturability**: `1.0` when wall thickness and boundary smoothness "
+                    "checks pass, otherwise penalized for thin slivers or jagged edges."
+                )
             for sol in displayed_solutions:
                 with st.container():
                     st.markdown(f"#### {sol.label} (`{sol.problem.name}`)")
+                    ver = sol.verification
                     m1, m2, m3, m4, m5 = st.columns(5)
                     m1.metric(
                         "Harbor Reward",
@@ -611,20 +629,23 @@ def main() -> None:
                         if sol.harbor_reward is not None
                         else "N/A",
                     )
-                    m2.metric("Arena Score", f"{sol.scoreboard.overall_score:.1f}/100")
-                    m3.metric("Compliance", f"{sol.fea_result.compliance:.2f}")
-                    m4.metric(
-                        "Volume / Target",
-                        f"{sol.scoreboard.volume_fraction:.3f} / {sol.problem.target_volume_fraction:.2f}",
+                    m2.metric(
+                        "Stiffness Factor",
+                        f"{ver.stiffness_factor:.4f}" if ver is not None else "N/A",
                     )
-                    max_vm = float(sol.fea_result.von_mises_stress.max())
-                    stress_limit = sol.problem.max_stress_limit
+                    m3.metric(
+                        "Weight Factor",
+                        f"{ver.volume_factor:.4f}" if ver is not None else "N/A",
+                    )
+                    m4.metric(
+                        "Stress Factor",
+                        f"{ver.stress_factor:.4f}" if ver is not None else "N/A",
+                    )
                     m5.metric(
-                        "Max Stress",
-                        f"{max_vm:.3f}"
-                        + (
-                            f" / {stress_limit:.2f}" if stress_limit is not None else ""
-                        ),
+                        "Manufacturability",
+                        f"{ver.manufacturability_factor:.4f}"
+                        if ver is not None
+                        else "N/A",
                     )
 
                     _render_three_panel_views(

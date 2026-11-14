@@ -385,6 +385,61 @@ def evaluate_cad_verification(
             num_actions=len(model.history),
         )
 
+    _, smoothness_factor = model.check_boundary_smoothness()
+    (
+        reward,
+        stiffness_factor,
+        volume_factor,
+        stress_factor,
+        manufacturability_factor,
+    ) = _compute_reward_factors(
+        problem,
+        comp=comp,
+        ref_c=ref_c,
+        vol=vol,
+        stock_vol=stock_vol,
+        max_vm=max_vm,
+        wall_ok=wall_ok,
+        sliver_ratio=sliver_ratio,
+        smoothness_factor=smoothness_factor,
+    )
+
+    return VerificationResult(
+        reward=reward,
+        valid=True,
+        reason="Valid parametric CAD design evaluated.",
+        volume_fraction=round(vol, 4),
+        target_volume_fraction=round(problem.target_volume_fraction, 4),
+        stock_volume_fraction=round(stock_vol, 4),
+        agent_compliance=round(comp, 4),
+        simp_reference_compliance=round(ref_c, 4),
+        case_compliances=[round(c, 4) for c in fea_result.case_compliances],
+        max_von_mises_stress=round(max_vm, 4),
+        max_stress_limit=problem.max_stress_limit,
+        structurally_connected=connected,
+        wall_thickness_ok=wall_ok,
+        thin_sliver_ratio=round(sliver_ratio, 4),
+        stiffness_factor=round(stiffness_factor, 4),
+        volume_factor=round(volume_factor, 4),
+        stress_factor=round(stress_factor, 4),
+        manufacturability_factor=round(manufacturability_factor, 4),
+        num_actions=len(model.history),
+    )
+
+
+def _compute_reward_factors(
+    problem: DesignProblem,
+    *,
+    comp: float,
+    ref_c: float,
+    vol: float,
+    stock_vol: float,
+    max_vm: float,
+    wall_ok: bool,
+    sliver_ratio: float,
+    smoothness_factor: float,
+) -> tuple[float, float, float, float, float]:
+    """Compute Harbor reward and its 4 multiplicative factors."""
     target_v = problem.target_volume_fraction
     vol_adjusted_comp = comp * max(1.0, vol / max(target_v, 1e-6))
     stiffness_factor = float(
@@ -406,7 +461,6 @@ def evaluate_cad_verification(
     else:
         stress_factor = 1.0
 
-    _, smoothness_factor = model.check_boundary_smoothness()
     if wall_ok:
         manufacturability_factor = float(smoothness_factor)
     else:
@@ -417,27 +471,12 @@ def evaluate_cad_verification(
         stiffness_factor * volume_factor * stress_factor * manufacturability_factor
     )
     reward = round(float(np.clip(raw_reward, 0.0, 1.0)), 4)
-
-    return VerificationResult(
-        reward=reward,
-        valid=True,
-        reason="Valid parametric CAD design evaluated.",
-        volume_fraction=round(vol, 4),
-        target_volume_fraction=round(target_v, 4),
-        stock_volume_fraction=round(stock_vol, 4),
-        agent_compliance=round(comp, 4),
-        simp_reference_compliance=round(ref_c, 4),
-        case_compliances=[round(c, 4) for c in fea_result.case_compliances],
-        max_von_mises_stress=round(max_vm, 4),
-        max_stress_limit=problem.max_stress_limit,
-        structurally_connected=connected,
-        wall_thickness_ok=wall_ok,
-        thin_sliver_ratio=round(sliver_ratio, 4),
-        stiffness_factor=round(stiffness_factor, 4),
-        volume_factor=round(volume_factor, 4),
-        stress_factor=round(stress_factor, 4),
-        manufacturability_factor=round(manufacturability_factor, 4),
-        num_actions=len(model.history),
+    return (
+        reward,
+        stiffness_factor,
+        volume_factor,
+        stress_factor,
+        manufacturability_factor,
     )
 
 
@@ -926,6 +965,49 @@ def run_in_repo_solver(
         scoreboard = evaluate_design(
             label, density, problem, reference_simp=simp_res, solver=solver
         )
+        stock_vol = CADModel(problem).get_stock_volume_fraction()
+        vol = float(np.mean(density))
+        comp = float(fea_res.compliance)
+        ref_c = float(simp_res.minimum_compliance)
+        max_vm = float(np.max(fea_res.von_mises_stress))
+        (
+            simp_reward,
+            stiffness_f,
+            volume_f,
+            stress_f,
+            mfg_f,
+        ) = _compute_reward_factors(
+            problem,
+            comp=comp,
+            ref_c=ref_c,
+            vol=vol,
+            stock_vol=stock_vol,
+            max_vm=max_vm,
+            wall_ok=True,
+            sliver_ratio=0.0,
+            smoothness_factor=1.0,
+        )
+        simp_ver = VerificationResult(
+            reward=simp_reward,
+            valid=True,
+            reason="Continuous SIMP theoretical reference evaluated.",
+            volume_fraction=round(vol, 4),
+            target_volume_fraction=round(problem.target_volume_fraction, 4),
+            stock_volume_fraction=round(stock_vol, 4),
+            agent_compliance=round(comp, 4),
+            simp_reference_compliance=round(ref_c, 4),
+            case_compliances=[round(c, 4) for c in fea_res.case_compliances],
+            max_von_mises_stress=round(max_vm, 4),
+            max_stress_limit=problem.max_stress_limit,
+            structurally_connected=True,
+            wall_thickness_ok=True,
+            thin_sliver_ratio=0.0,
+            stiffness_factor=round(stiffness_f, 4),
+            volume_factor=round(volume_f, 4),
+            stress_factor=round(stress_f, 4),
+            manufacturability_factor=round(mfg_f, 4),
+            num_actions=0,
+        )
         return SolutionRecord(
             solution_id=f"solver:simp:{_problem_short_id(problem)}",
             label=label,
@@ -937,8 +1019,8 @@ def run_in_repo_solver(
             density=density,
             fea_result=fea_res,
             scoreboard=scoreboard,
-            verification=None,
-            harbor_reward=None,
+            verification=simp_ver,
+            harbor_reward=simp_ver.reward,
             metadata={
                 "iterations": simp_res.iterations,
                 "compliance_history": list(simp_res.compliance_history),
