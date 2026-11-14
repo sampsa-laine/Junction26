@@ -74,6 +74,11 @@ print(
 model.save_json("/app/design.json")
 ```
 
+### Time Budget & Fast Workflow Tips
+- **Save early, update often**: Write a valid, connected `/app/design.json` within your first 2–3 steps, and overwrite `/app/design.json` immediately whenever you find an improved valid design.
+- **Keep scripts fast (`< 5s`)**: Each `FEASolver.solve()` takes ~15ms, so keep any Python search/optimization script under **150–200 evaluations** (use `model.to_density_grid(subgrid=1)` during fast inner loops, then verify once with `inspect_design()`). Avoid long `scipy.optimize` sweeps or writing many successive refinement scripts.
+- **Stop once satisfied**: Once you hit the target volume fraction, stress limit, wall-thickness check, and strong stiffness, save `/app/design.json` and finish.
+
 ---
 
 ## Scoring & Verification (`/logs/verifier/reward.txt`)
