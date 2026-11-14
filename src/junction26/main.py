@@ -1,6 +1,4 @@
-def main():
-    print("Hello from junction26!")
-
+from src.agents.main import main
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,504 @@
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
+from typing import Literal
+
+from matplotlib import colormaps
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.colors import LogNorm, Normalize
+from matplotlib.figure import Figure
+from matplotlib.patches import Circle, PathPatch, Rectangle
+from matplotlib.path import Path as MplPath
+import numpy as np
+from shapely.geometry import Polygon
+from shapely.geometry.polygon import orient
+
+from .csg import CADModel, CutoutAction
+from .fea import FEAResult, FEASolver
+from .problem import DesignProblem, KeepOutType
+from .solutions import ReplayFrame, SolutionRecord
+
+FieldKind = Literal["stress", "strain_energy"]
+
+_LOAD_CASE_COLORS = ("#dc2626", "#7c3aed", "#ea580c", "#0891b2")
+
+
+@dataclass
+class InspectionViews:
+    model_figure: Figure
+    stress_figure: Figure
+    strain_figure: Figure
+    fea_result: FEAResult
+    density: np.ndarray
+    load_case_index: int | None
+
+
+def _new_figure(figsize: tuple[float, float] = (5.0, 3.2), dpi: int = 110) -> Figure:
+    fig = Figure(figsize=figsize, dpi=dpi)
+    FigureCanvasAgg(fig)
+    return fig
+
+
+def _polygon_to_compound_path(poly: Polygon) -> MplPath | None:
+    oriented = orient(poly, sign=1.0)
+    vertices: list[tuple[float, float]] = []
+    codes: list[int] = []
+
+    for ring in [oriented.exterior, *oriented.interiors]:
+        coords = list(ring.coords)
+        if len(coords) < 3:
+            continue
+        vertices.append((float(coords[0][0]), float(coords[0][1])))
+        codes.append(int(MplPath.MOVETO))
+        for x, y in coords[1:-1]:
+            vertices.append((float(x), float(y)))
+            codes.append(int(MplPath.LINETO))
+        vertices.append((float(coords[-1][0]), float(coords[-1][1])))
+        codes.append(int(MplPath.CLOSEPOLY))
+
+    if not vertices:
+        return None
+    return MplPath(np.asarray(vertices, dtype=float), codes)
+
+
+def compute_load_case_fea(
+    problem: DesignProblem,
+    density: np.ndarray,
+    load_case_index: int | None = None,
+    penalty: float = 1.0,
+) -> FEAResult:
+    if load_case_index is None:
+        return FEASolver(problem).solve(density, penalty=penalty)
+
+    cases = problem.effective_load_cases
+    if load_case_index < 0 or load_case_index >= len(cases):
+        raise ValueError(
+            f"load_case_index {load_case_index} out of range for {len(cases)} load cases."
+        )
+    selected_loads = list(cases[load_case_index])
+    single_case_problem = replace(
+        problem, loads=selected_loads, load_cases=[selected_loads]
+    )
+    return FEASolver(single_case_problem).solve(density, penalty=penalty)
+
+
+def _draw_keepouts(ax: Axes, problem: DesignProblem) -> None:
+    for ko in problem.keepouts:
+        is_solid = ko.keepout_type == KeepOutType.SOLID
+        edge = "#059669" if is_solid else "#94a3b8"
+        face = (0.02, 0.59, 0.41, 0.14) if is_solid else (0.95, 0.96, 0.98, 0.85)
+        style = ":" if is_solid else "--"
+        if ko.shape == "circle":
+            cx, cy, r = ko.params
+            ax.add_patch(
+                Circle(
+                    (cx, cy),
+                    r,
+                    facecolor=face,
+                    edgecolor=edge,
+                    linestyle=style,
+                    linewidth=1.1,
+                    zorder=3,
+                )
+            )
+        elif ko.shape == "rect":
+            rx, ry, rw, rh = ko.params
+            ax.add_patch(
+                Rectangle(
+                    (rx, ry),
+                    rw,
+                    rh,
+                    facecolor=face,
+                    edgecolor=edge,
+                    linestyle=style,
+                    linewidth=1.1,
+                    zorder=3,
+                )
+            )
+
+
+def _draw_supports_and_loads(
+    ax: Axes, problem: DesignProblem, load_case_index: int | None
+) -> None:
+    if problem.supports:
+        sx = [s.x for s in problem.supports]
+        sy = [s.y for s in problem.supports]
+        ax.plot(
+            sx,
+            sy,
+            marker="^",
+            color="#0f172a",
+            markersize=4.5,
+            linestyle="none",
+            zorder=6,
+        )
+
+    cases = problem.effective_load_cases
+    if load_case_index is not None:
+        if load_case_index < 0 or load_case_index >= len(cases):
+            raise ValueError(
+                f"load_case_index {load_case_index} out of range for {len(cases)} load cases."
+            )
+        active_cases = [(load_case_index, cases[load_case_index])]
+    else:
+        active_cases = list(enumerate(cases))
+
+    arrow_scale = 0.16 * min(problem.width, problem.height)
+    for case_idx, loads in active_cases:
+        color = _LOAD_CASE_COLORS[case_idx % len(_LOAD_CASE_COLORS)]
+        for load in loads:
+            mag = float(np.hypot(load.fx, load.fy))
+            if mag <= 1e-9:
+                continue
+            dx = (load.fx / mag) * arrow_scale
+            dy = (load.fy / mag) * arrow_scale
+            ax.annotate(
+                "",
+                xy=(load.x + dx, load.y + dy),
+                xytext=(load.x, load.y),
+                arrowprops={
+                    "arrowstyle": "->",
+                    "color": color,
+                    "lw": 1.8,
+                    "mutation_scale": 11,
+                },
+                zorder=7,
+            )
+
+
+def render_model_geometry_figure(
+    problem: DesignProblem,
+    cad_model: CADModel | None,
+    density: np.ndarray,
+    highlight_action: CutoutAction | None = None,
+    load_case_index: int | None = None,
+    title: str | None = None,
+) -> Figure:
+    fig = _new_figure()
+    ax = fig.add_subplot(111)
+
+    ax.add_patch(
+        Rectangle(
+            (0.0, 0.0),
+            problem.width,
+            problem.height,
+            facecolor="#f8fafc",
+            edgecolor="#cbd5e1",
+            linestyle="--",
+            linewidth=0.9,
+            zorder=0,
+        )
+    )
+
+    if cad_model is not None:
+        for poly in cad_model._extract_polygons(cad_model.current_geometry):
+            path = _polygon_to_compound_path(poly)
+            if path is not None:
+                ax.add_patch(
+                    PathPatch(
+                        path,
+                        facecolor="#3b82f6",
+                        edgecolor="#1d4ed8",
+                        linewidth=1.1,
+                        alpha=0.88,
+                        zorder=2,
+                    )
+                )
+    else:
+        ax.imshow(
+            density,
+            origin="lower",
+            extent=(0.0, problem.width, 0.0, problem.height),
+            cmap="Greys",
+            vmin=0.0,
+            vmax=1.0,
+            interpolation="nearest",
+            aspect="equal",
+            zorder=1,
+        )
+
+    _draw_keepouts(ax, problem)
+
+    if highlight_action is not None and cad_model is not None:
+        raw_cut = cad_model._action_to_geometry(highlight_action)
+        clipped_cut = raw_cut.intersection(cad_model.stock_plate)
+        if not cad_model.solid_keepouts.is_empty:
+            clipped_cut = clipped_cut.difference(cad_model.solid_keepouts)
+        for poly in cad_model._extract_polygons(clipped_cut):
+            path = _polygon_to_compound_path(poly)
+            if path is not None:
+                ax.add_patch(
+                    PathPatch(
+                        path,
+                        facecolor=(0.94, 0.27, 0.27, 0.22),
+                        edgecolor="#dc2626",
+                        linestyle="--",
+                        linewidth=1.6,
+                        zorder=5,
+                    )
+                )
+
+    _draw_supports_and_loads(ax, problem, load_case_index)
+
+    pad = 0.14 * max(problem.width, problem.height)
+    ax.set_xlim(-pad * 0.5, problem.width + pad * 0.7)
+    ax.set_ylim(-pad * 0.7, problem.height + pad * 0.5)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x", fontsize=8)
+    ax.set_ylabel("y", fontsize=8)
+    ax.tick_params(labelsize=7)
+
+    vol = (
+        cad_model.get_volume_fraction()
+        if cad_model is not None
+        else float(np.mean(density))
+    )
+    resolved_title = title or f"Resulting Model (Vol={vol:.3f})"
+    ax.set_title(resolved_title, fontsize=9, fontweight="bold")
+    fig.tight_layout()
+    return fig
+
+
+def render_fea_field_figure(
+    problem: DesignProblem,
+    density: np.ndarray,
+    fea_result: FEAResult,
+    field: FieldKind = "stress",
+    cad_model: CADModel | None = None,
+    log_scale: bool = False,
+    title: str | None = None,
+) -> Figure:
+    if field == "stress":
+        raw_field = fea_result.von_mises_stress
+        cmap_name = "turbo"
+        default_label = "Von Mises Stress"
+    elif field == "strain_energy":
+        raw_field = fea_result.element_strain_energies
+        cmap_name = "viridis"
+        default_label = "Element Strain Energy"
+    else:
+        raise ValueError(
+            f"Unsupported field {field!r}; expected 'stress' or 'strain_energy'."
+        )
+
+    void_mask = density <= 1e-3
+    masked_field = np.ma.masked_where(void_mask, raw_field)
+
+    base_cmap = colormaps[cmap_name]
+    cmap = base_cmap.with_extremes(bad="#f8fafc")
+
+    solid_values = raw_field[~void_mask]
+    finite_values = solid_values[np.isfinite(solid_values)]
+
+    if log_scale and finite_values.size > 0:
+        positive_values = finite_values[finite_values > 0.0]
+        if positive_values.size > 0:
+            vmin = float(np.min(positive_values))
+            vmax = float(np.max(positive_values))
+            if vmax <= vmin * (1.0 + 1e-9):
+                vmin = max(vmax * 0.1, 1e-30)
+                vmax = max(vmax, vmin * 10.0)
+            cmap = base_cmap.with_extremes(bad="#f8fafc", under=base_cmap(0.0))
+            norm = LogNorm(vmin=vmin, vmax=vmax, clip=False)
+        else:
+            norm = Normalize(vmin=0.0, vmax=1.0)
+    else:
+        if finite_values.size > 0:
+            vmin = float(min(0.0, np.min(finite_values)))
+            vmax = float(np.max(finite_values))
+            if vmax <= vmin + 1e-12:
+                vmax = vmin + 1.0
+            norm = Normalize(vmin=vmin, vmax=vmax)
+        else:
+            norm = Normalize(vmin=0.0, vmax=1.0)
+
+    fig = _new_figure()
+    ax = fig.add_subplot(111)
+
+    im = ax.imshow(
+        masked_field,
+        origin="lower",
+        extent=(0.0, problem.width, 0.0, problem.height),
+        cmap=cmap,
+        norm=norm,
+        interpolation="nearest",
+        aspect="equal",
+    )
+
+    if cad_model is not None:
+        for poly in cad_model._extract_polygons(cad_model.current_geometry):
+            path = _polygon_to_compound_path(poly)
+            if path is not None:
+                ax.add_patch(
+                    PathPatch(
+                        path,
+                        facecolor="none",
+                        edgecolor="#0f172a",
+                        linewidth=0.7,
+                        alpha=0.65,
+                        zorder=3,
+                    )
+                )
+
+    cbar_label = default_label
+    if field == "stress" and problem.max_stress_limit is not None:
+        cbar_label = f"{default_label} (limit <= {problem.max_stress_limit:.2f})"
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label(cbar_label, fontsize=7.5)
+    cbar.ax.tick_params(labelsize=7)
+
+    peak_val = float(np.max(finite_values)) if finite_values.size > 0 else 0.0
+    if title is None:
+        if field == "stress":
+            limit_note = (
+                f" / {problem.max_stress_limit:.2f}"
+                if problem.max_stress_limit is not None
+                else ""
+            )
+            resolved_title = f"Von Mises Stress (Max={peak_val:.3f}{limit_note})"
+        else:
+            scale_tag = " [Log]" if log_scale else ""
+            resolved_title = f"Strain Energy{scale_tag} (C={fea_result.compliance:.2f})"
+    else:
+        resolved_title = title
+
+    ax.set_xlim(0.0, problem.width)
+    ax.set_ylim(0.0, problem.height)
+    ax.set_xlabel("x", fontsize=8)
+    ax.set_ylabel("y", fontsize=8)
+    ax.tick_params(labelsize=7)
+    ax.set_title(resolved_title, fontsize=9, fontweight="bold")
+    fig.tight_layout()
+    return fig
+
+
+def render_solution_views(
+    solution_or_frame: SolutionRecord | ReplayFrame,
+    problem: DesignProblem | None = None,
+    load_case_index: int | None = None,
+    log_strain: bool = False,
+    highlight_cutout: bool = True,
+) -> InspectionViews:
+    if isinstance(solution_or_frame, SolutionRecord):
+        target_problem = solution_or_frame.problem
+        active_problem = problem or target_problem
+        cad_model = solution_or_frame.cad_model
+        density = solution_or_frame.density
+        highlight = None
+        label_prefix = solution_or_frame.label
+    else:
+        target_problem = solution_or_frame.cad_model.problem
+        active_problem = problem or target_problem
+        cad_model = solution_or_frame.cad_model
+        density = solution_or_frame.density
+        highlight = solution_or_frame.action if highlight_cutout else None
+        label_prefix = f"Step {solution_or_frame.step}/{solution_or_frame.total_steps}"
+
+    if (
+        load_case_index is None
+        and (problem is None or problem is target_problem)
+        and len(solution_or_frame.fea_result.case_compliances)
+        == len(target_problem.effective_load_cases)
+    ):
+        fea_res = solution_or_frame.fea_result
+    else:
+        fea_res = compute_load_case_fea(
+            active_problem, density, load_case_index=load_case_index, penalty=1.0
+        )
+
+    case_tag = (
+        f" [Case {load_case_index + 1}]"
+        if load_case_index is not None
+        else (" [All Cases]" if len(active_problem.effective_load_cases) > 1 else "")
+    )
+
+    model_fig = render_model_geometry_figure(
+        problem=active_problem,
+        cad_model=cad_model,
+        density=density,
+        highlight_action=highlight,
+        load_case_index=load_case_index,
+        title=f"{label_prefix} — Model{case_tag}",
+    )
+    stress_fig = render_fea_field_figure(
+        problem=active_problem,
+        density=density,
+        fea_result=fea_res,
+        field="stress",
+        cad_model=cad_model,
+        log_scale=False,
+        title=f"Von Mises Stress{case_tag} (Max={float(np.max(fea_res.von_mises_stress)):.3f})",
+    )
+    strain_fig = render_fea_field_figure(
+        problem=active_problem,
+        density=density,
+        fea_result=fea_res,
+        field="strain_energy",
+        cad_model=cad_model,
+        log_scale=log_strain,
+        title=f"Strain Energy{case_tag} (C={fea_res.compliance:.2f})",
+    )
+
+    return InspectionViews(
+        model_figure=model_fig,
+        stress_figure=stress_fig,
+        strain_figure=strain_fig,
+        fea_result=fea_res,
+        density=density,
+        load_case_index=load_case_index,
+    )
+
+
+def render_replay_trajectory_figure(
+    frames: Sequence[ReplayFrame],
+    problem: DesignProblem,
+    active_step: int | None = None,
+) -> Figure:
+    fig = _new_figure(figsize=(8.0, 2.5), dpi=110)
+    ax_vol, ax_comp, ax_stress = fig.subplots(1, 3)
+
+    steps = [f.step for f in frames]
+    vols = [f.volume_fraction for f in frames]
+    comps = [f.compliance for f in frames]
+    stresses = [f.max_von_mises_stress for f in frames]
+
+    ax_vol.plot(steps, vols, marker="o", color="#2563eb", linewidth=1.6, markersize=4)
+    ax_vol.axhline(
+        problem.target_volume_fraction,
+        color="#059669",
+        linestyle="--",
+        linewidth=1.1,
+        label=f"Target ({problem.target_volume_fraction:.2f})",
+    )
+    ax_vol.set_title("Volume Fraction", fontsize=8.5, fontweight="bold")
+    ax_vol.set_xlabel("Step", fontsize=7.5)
+    ax_vol.legend(fontsize=7, loc="best")
+    ax_vol.tick_params(labelsize=7)
+
+    ax_comp.plot(steps, comps, marker="o", color="#7c3aed", linewidth=1.6, markersize=4)
+    ax_comp.set_title("Compliance", fontsize=8.5, fontweight="bold")
+    ax_comp.set_xlabel("Step", fontsize=7.5)
+    ax_comp.tick_params(labelsize=7)
+
+    ax_stress.plot(
+        steps, stresses, marker="o", color="#dc2626", linewidth=1.6, markersize=4
+    )
+    if problem.max_stress_limit is not None:
+        ax_stress.axhline(
+            problem.max_stress_limit,
+            color="#ea580c",
+            linestyle="--",
+            linewidth=1.1,
+            label=f"Limit ({problem.max_stress_limit:.2f})",
+        )
+        ax_stress.legend(fontsize=7, loc="best")
+    ax_stress.set_title("Max Von Mises Stress", fontsize=8.5, fontweight="bold")
+    ax_stress.set_xlabel("Step", fontsize=7.5)
+    ax_stress.tick_params(labelsize=7)
+
+    if active_step is not None:
+        for axis in (ax_vol, ax_comp, ax_stress):
+            axis.axvline(active_step, color="#0f172a", linestyle=":", linewidth=1.0)
+
+    fig.tight_layout()
+    return fig

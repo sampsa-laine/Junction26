@@ -1,3 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["test"]
+
 [project]
 name = "junction26"
 version = "0.1.0"
@@ -6,22 +17,23 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "harbor>=0.26.0",
+    "matplotlib>=3.11.2",
     "modal>=1.6.4",
+    "numpy>=2.5.4",
+    "scipy>=1.18.1",
+    "shapely>=2.2.0",
+    "streamlit>=1.67.0",
 ]
 
 [project.scripts]
-junction26 = "junction26.main:main"
-
-[build-system]
-requires = ["uv_build>=0.13.7,<0.14.0"]
-build-backend = "uv_build"
-
-[tool.pytest.ini_options]
-addopts = "--doctest-modules --import-mode=importlib"
-testpaths = ["test", "src"]
-pythonpath = ["src"]
+junction26 = "src.agents.main:main"
+arena = "src.agents.main:run_app"
+cad-sim = "src.agents.cad_cli:main"
+harbor-tasks = "src.agents.harbor_sync:main"
 
 [dependency-groups]
 dev = [
+    "pyright>=1.1.414",
     "pytest>=9.2.0",
+    "ruff>=0.17.5",
 ]

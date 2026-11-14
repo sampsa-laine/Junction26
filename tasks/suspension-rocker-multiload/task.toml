@@ -1,0 +1,42 @@
+schema_version = "1.4"
+artifacts = ["/app/design.json"]
+
+[task]
+name = "junction26/suspension-rocker-multiload"
+version = "1.0.0"
+description = "Design an 80x40 motorsport suspension rocker arm (<=40% volume fraction) connecting 3 solid mounting bosses across 2 independent load cases (vertical bump + lateral braking shear)."
+authors = [{ name = "Junction26 Team", email = "team@junction26.local" }]
+keywords = ["cad", "fea", "topology-optimization", "mechanical-engineering", "simulation"]
+
+[metadata]
+author_name = "Junction26 Team"
+author_email = "team@junction26.local"
+difficulty = "hard"
+category = "scientific_computing"
+tags = ["cad", "fea", "structural-optimization", "csg"]
+expert_time_estimate_min = 35.0
+junior_time_estimate_min = 90.0
+
+[verifier]
+timeout_sec = 180.0
+environment_mode = "separate"
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 600.0
+
+[environment]
+network_mode = "public"
+build_timeout_sec = 600.0
+os = "linux"
+mcp_servers = []
+
+[environment.env]
+PYTHONPATH = "/opt"
+CAD_PROBLEM_PATH = "/app/problem.json"
+CAD_DESIGN_PATH = "/app/design.json"
+
+[solution.env]
+PYTHONPATH = "/solution:/opt"
