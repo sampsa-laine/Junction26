@@ -1,0 +1,9 @@
+Inference credentials: 1 mappings across 1 trials
+opencode / gemini (1 trials): GEMINI_API_KEY → GEMINI_API_KEY; base URL=https://generativelanguage.googleapis.com/v1beta (best guess; not injected); API format=google_generate_content (agent_default)
+Skipping image OS validation for hb__87fab2afd5d102b649e079decd0c1603: docker inspect returned 1
+Running command: apt-get update && apt-get install -y nodejs npm
+Command outputs captured
+Running command: set -euo pipefail; if ldd --version 2>&1 | grep -qi musl || [ -f /etc/alpine-release ]; then node --version && npm --version; else curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | env -u NODE_VERSION bash && export NVM_DIR="$HOME/.nvm" && \. "$NVM_DIR/nvm.sh" || true && command -v nvm &>/dev/null || { echo 'Error: NVM failed to load' >&2; exit 1; } && nvm install 22 && nvm alias default 22 && npm -v; fi && npm i -g opencode-ai@latest && opencode --version
+Trial cantilever-lightweight__E7FUUKH failed: Agent setup timed out after 360.0 seconds
+Collecting main service artifacts
+Not retrying trial because the maximum number of retries has been reached

@@ -1,6 +1,6 @@
 import unittest
 
-from agents.example import add
+from src.agents.example import add
 
 
 class TestAdd(unittest.TestCase):

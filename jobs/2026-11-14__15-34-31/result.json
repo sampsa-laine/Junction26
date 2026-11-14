@@ -1,0 +1,44 @@
+{
+    "schema_version": 1,
+    "id": "a5aecb66-cf06-4af8-bbd2-6871238e9212",
+    "started_at": "2026-11-14T15:34:34.006619",
+    "updated_at": "2026-11-14T15:44:38.165572",
+    "finished_at": "2026-11-14T15:44:38.165572",
+    "n_total_trials": 1,
+    "stats": {
+        "n_completed_trials": 1,
+        "n_errored_trials": 1,
+        "n_running_trials": 0,
+        "n_pending_trials": 0,
+        "n_cancelled_trials": 0,
+        "n_retries": 0,
+        "evals": {
+            "opencode__gemini-3.1-pro-preview__adhoc": {
+                "n_trials": 1,
+                "n_errors": 1,
+                "metrics": [
+                    {
+                        "mean": 0.5016
+                    }
+                ],
+                "pass_at_k": {},
+                "reward_stats": {
+                    "reward": {
+                        "0.5016": [
+                            "suspension-rocker-multiload__SyQ4bQ8"
+                        ]
+                    }
+                },
+                "exception_stats": {
+                    "NonZeroAgentExitCodeError": [
+                        "suspension-rocker-multiload__SyQ4bQ8"
+                    ]
+                }
+            }
+        },
+        "n_input_tokens": 829284,
+        "n_cache_tokens": 704159,
+        "n_output_tokens": 14568,
+        "cost_usd": 0.6721937999999998
+    }
+}

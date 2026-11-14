@@ -1,0 +1,206 @@
+{
+  "name": "Stress-Constrained L-Bracket",
+  "width": 50.0,
+  "height": 50.0,
+  "nx": 50,
+  "ny": 50,
+  "supports": [
+    {
+      "x": 0.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 1.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 2.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 3.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 4.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 5.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 6.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 7.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 8.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 9.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 10.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 11.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 12.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 13.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 14.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 15.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 16.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 17.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 18.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 19.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    },
+    {
+      "x": 20.0,
+      "y": 50.0,
+      "fixed_x": true,
+      "fixed_y": true,
+      "tolerance": 1.1
+    }
+  ],
+  "loads": [
+    {
+      "x": 46.0,
+      "y": 10.0,
+      "fx": 0.0,
+      "fy": -1.0
+    }
+  ],
+  "load_cases": [],
+  "keepouts": [
+    {
+      "shape": "rect",
+      "params": [
+        20.0,
+        20.0,
+        30.0,
+        30.0
+      ],
+      "keepout_type": "void"
+    },
+    {
+      "shape": "rect",
+      "params": [
+        0.0,
+        47.5,
+        20.0,
+        2.5
+      ],
+      "keepout_type": "solid"
+    },
+    {
+      "shape": "circle",
+      "params": [
+        46.0,
+        10.0,
+        3.0
+      ],
+      "keepout_type": "solid"
+    }
+  ],
+  "target_volume_fraction": 0.36,
+  "youngs_modulus": 1.0,
+  "poissons_ratio": 0.3,
+  "penalty": 3.0,
+  "filter_radius": 1.6,
+  "max_stress_limit": 1.85,
+  "min_feature_radius": 1.5,
+  "min_wall_thickness": 1.6,
+  "max_cutouts": 22,
+  "description": "Design a 50x50 L-bracket (<=36% domain area; stock L-shape starts at 64% area) that resists tip bending without exceeding the von Mises stress limit around the re-entrant (20, 20) inner corner."
+}

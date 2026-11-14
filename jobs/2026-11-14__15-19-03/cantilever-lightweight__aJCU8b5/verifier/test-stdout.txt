@@ -1,0 +1,7 @@
+=== HARBOR VERIFIER REPORT (Cantilever Lightweight Bracket) ===
+Status          : INVALID (Design is uncut or removes negligible material (<2% area).)
+Volume Fraction : 1.0000 / target 0.4500
+Agent Compliance: 32.9879 vs SIMP C*: 60.7449
+Max von Mises   : 0.5796 (limit: 1.4)
+Factors         : stiff=0.000, vol=0.000, stress=0.000, mfg=0.000
+FINAL REWARD    : 0.0000

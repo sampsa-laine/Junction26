@@ -1,0 +1,15 @@
+timestamp=2026-11-14T12:27:28.150Z level=INFO run=3c658221 message="creating instance" directory=/app
+timestamp=2026-11-14T12:27:28.151Z level=INFO run=3c658221 message=fromDirectory directory=/app
+timestamp=2026-11-14T12:27:28.155Z level=INFO run=3c658221 message=bootstrapping directory=/app
+timestamp=2026-11-14T12:27:28.159Z level=INFO run=3c658221 message=loading path=/root/.config/opencode/config.json
+timestamp=2026-11-14T12:27:28.159Z level=INFO run=3c658221 message=loading path=/root/.config/opencode/opencode.json
+timestamp=2026-11-14T12:27:28.162Z level=INFO run=3c658221 message=loading path=/root/.config/opencode/opencode.jsonc
+timestamp=2026-11-14T12:27:28.221Z level=INFO run=3c658221 message="all LSPs are disabled"
+timestamp=2026-11-14T12:27:28.221Z level=INFO run=3c658221 message="all formatters are disabled"
+timestamp=2026-11-14T12:27:28.221Z level=INFO run=3c658221 message=init
+timestamp=2026-11-14T12:27:28.431Z level=INFO run=3c658221 message=created id=ses_e25f916d1ffergKHbSOAodmBOT slug=lucky-planet version=1.19.5 projectID=global directory=/app path=app workspaceID=undefined parentID=undefined title="New session - 2026-11-14T12:27:28.431Z" agent=undefined model=undefined metadata=undefined permission="[{\"permission\":\"question\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_enter\",\"pattern\":\"*\",\"action\":\"deny\"},{\"permission\":\"plan_exit\",\"pattern\":\"*\",\"action\":\"deny\"}]" cost=0 tokens.input=0 tokens.output=0 tokens.reasoning=0 tokens.cache.read=0 tokens.cache.write=0 time.created=1794659248431 time.updated=1794659248431
+timestamp=2026-11-14T12:27:28.439Z level=INFO run=3c658221 message="event connected"
+timestamp=2026-11-14T12:27:28.475Z level=INFO run=3c658221 message=loop session.id=ses_e25f916d1ffergKHbSOAodmBOT step=0
+timestamp=2026-11-14T12:27:29.029Z level=INFO run=3c658221 message=stream providerID=google modelID=gemini-3.8-flash session.id=ses_e25f916d1ffergKHbSOAodmBOT small=true agent=title mode=primary
+timestamp=2026-11-14T12:27:29.036Z level=INFO run=3c658221 message="llm runtime selected" llm.runtime=ai-sdk llm.provider=google llm.model=gemini-3.8-flash
+timestamp=2026-11-14T12:27:29.043Z level=ERROR run=3c658221 message="stream error" providerID=google modelID=gemini-3.8-flash session.id=ses_e25f916d1ffergKHbSOAodmBOT small=true agent=title mode=primary error.error="AI_LoadAPIKeyError: Google Generative AI API key is missing. Pass it using the 'apiKey' parameter or the GOOGLE_GENERATIVE_AI_API_KEY environment variable."
