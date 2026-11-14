@@ -6,6 +6,10 @@
 | --- | --- |
 | `uv sync` | Install project and development dependencies |
 | `uv run junction26` | Run the application |
+| `uv run arena` | Launch interactive Streamlit Arena & Inspector |
+| `uv run harbor-tasks sync` | Sync `tasks/*` from `src/agents/` |
+| `uv run harbor-tasks run --task all --agent oracle` | Run Oracle reference across all 3 tasks |
+| `uv run build-site` | Build static showcase site in `site/` |
 | `uv run pytest` | Run unittest tests and doctests |
 | `uv run pytest -v` | Run tests with individual test names |
 
