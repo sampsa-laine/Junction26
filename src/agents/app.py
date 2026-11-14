@@ -255,6 +255,10 @@ def main() -> None:
     st.set_page_config(
         page_title="2D CAD TopOpt Inspector & Arena", page_icon="🏗️", layout="wide"
     )
+    st.markdown(
+        "<style>[data-testid='stStatusWidget'] { display: none !important; }</style>",
+        unsafe_allow_html=True,
+    )
 
     st.title("🏗️ 2D CAD Topology Optimization Evaluation & Replay Inspector")
     st.caption(
