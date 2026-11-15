@@ -1085,6 +1085,29 @@ class TestStreamlitFrontendApp(unittest.TestCase):
             v_last.strain_figure.axes[0].images[0].get_clim(),
         )
 
+    def test_replay_trajectory_figure_has_clear_background_and_white_text(
+        self,
+    ) -> None:
+        from matplotlib.image import imread
+
+        prob = make_harbor_cantilever()
+        model = CADModel(prob)
+        model.cut_circle(25.0, 15.0, 4.0)
+        frames = replay_cutout_history(model)
+        fig = render_replay_trajectory_figure(frames, prob, active_step=1)
+        self.assertEqual(fig.patch.get_alpha(), 0.0)
+        for ax in fig.axes:
+            self.assertEqual(ax.patch.get_alpha(), 0.0)
+            self.assertEqual(ax.title.get_color(), "#ffffff")
+            self.assertEqual(ax.xaxis.label.get_color(), "#ffffff")
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png")
+        buf.seek(0)
+        rgba = imread(buf)
+        self.assertEqual(rgba.shape[2], 4)
+        self.assertEqual(float(rgba[0, 0, 3]), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
