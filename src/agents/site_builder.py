@@ -220,15 +220,29 @@ def _save_views(
         return paths
 
     views = render_solution_views(solution_or_frame, problem=problem)
+    label_grey = "#7a889b"
     paths = {}
     for key, fig in [
         ("geometry", views.model_figure),
         ("stress", views.stress_figure),
         ("strain", views.strain_figure),
     ]:
+        fig.patch.set_alpha(0.0)
+        for ax in fig.axes:
+            ax.patch.set_alpha(1.0)
+            ax.title.set_color(label_grey)
+            ax.xaxis.label.set_color(label_grey)
+            ax.yaxis.label.set_color(label_grey)
+            ax.tick_params(colors=label_grey)
         filename = f"{prefix}_{key}.png"
         out_path = assets_dir / filename
-        fig.savefig(out_path, dpi=130, bbox_inches="tight", facecolor="white")
+        fig.savefig(
+            out_path,
+            dpi=130,
+            bbox_inches="tight",
+            facecolor="none",
+            edgecolor="none",
+        )
         plt.close(fig)
         paths[key] = f"assets/{filename}"
     return paths
