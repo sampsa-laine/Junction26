@@ -2,6 +2,7 @@
 
  - [Command cheatsheet](../README.md#command-cheatsheet)
  - [Overview](./overview.md)
+ - [Project Layout](./project-layout.md)
  - [Topology Optimization Arena & Inspector](./arena.md)
  - [Harbor Evaluation Suite](./harbor.md)
 

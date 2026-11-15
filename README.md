@@ -43,7 +43,10 @@ connectivity, wall thickness, feature violations, hotspots, and low-strain zones
 | `uv run harbor-tasks run --task all --agent oracle` | Run reference implementation across all 4 tasks |
 | `uv run harbor-tasks run --task l-bracket-stress --agent opencode` | Run OpenCode agent (reads `GEMINI_API_KEY` & `HARBOR_MODEL` from `.env`) |
 | `uv run build-site` | Build static showcase site in `site/` |
+| `uv run cad-sim --help` | Run the 2D CAD & FEA CLI workbench |
 | `uv run pytest` | Run `unittest` tests and doctests |
+| `uv run ruff format` | Format Python files |
+| `uv run pyright` | Run static type checking |
 
 ## Running Harbor evaluations
 

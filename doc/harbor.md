@@ -1,6 +1,6 @@
 # Harbor Evaluation Suite
 
-Three graded Harbor v1.4 tasks benchmark coding agents (e.g., OpenCode) on 2D structural CAD lightweighting with `<15ms` Q4 FEA feedback. All implementation modules live in `src/agents/` and sync into `tasks/` via `uv run harbor-tasks sync`.
+Four graded Harbor v1.4 tasks benchmark coding agents (e.g., OpenCode) on 2D structural CAD lightweighting with `<15ms` Q4 FEA feedback. All implementation modules live in `src/agents/` and sync into `tasks/` via `uv run harbor-tasks sync`.
 
 ## Task Suite (`tasks/`)
 
@@ -16,6 +16,27 @@ Three graded Harbor v1.4 tasks benchmark coding agents (e.g., OpenCode) on 2D st
 - **Sandbox (`environment/`)**: Exposes `cad-sim` CLI and `cad_env` Python package (`problem.py`, `fea.py`, `csg.py`, `export.py`, `cad_cli.py`). Excludes `simp.py`, `verifier.py`, and `oracle_solver.py`.
 - **Verifier (`tests/`, `environment_mode = "separate"`)**: Collects `/app/design.json` into a clean container, checks connectivity, feature limits, wall thickness, volume budget, and stress caps against `SIMPOptimizer` ($C^*$), and writes a continuous reward $\in [0.0, 1.0]$ to `/logs/verifier/reward.txt`.
 - **Oracle (`solution/`)**: Fits filleted CSG polygons and holes to SIMP void cavities (`oracle_solver.py`).
+
+## Sandbox `cad-sim` Commands
+
+| Command | Purpose |
+| :--- | :--- |
+| `cad-sim info` | Print problem dimensions, supports, load cases, and constraints |
+| `cad-sim status [--ascii] [--json]` | Run Q4 FEA and report compliance, volume, stress, hotspots, and coldspots |
+| `cad-sim cut-circle \| cut-rect \| cut-slot \| cut-polygon` | Subtract parametric CSG cutouts (supports `--fillet`, `--mirror-x`, `--mirror-y`) |
+| `cad-sim undo \| reset` | Undo last cutout or reset to uncut stock |
+| `cad-sim export --svg ... --dxf ...` | Export current `CADModel` geometry |
+
+## Reward Scoring (`verifier.py`)
+
+Hard gates return `0.0`: uncut stock, invalid/disconnected load path, or feature-size/keep-out/cutout-count violations. Valid designs score:
+
+$$\text{reward} = \text{clip}(\text{stiffness} \times \text{volume} \times \text{stress} \times \text{manufacturability},\ 0.0,\ 1.0)$$
+
+- **Stiffness**: $(C^* / C_{\text{vol-adj}})^{0.75}$ vs. SIMP reference $C^*$.
+- **Volume**: `1.0` within `target_volume_fraction + 0.005`, quadratic decay above target.
+- **Stress**: `1.0` below `max_stress_limit`, penalized by $(\sigma_{\text{limit}} / \sigma_{\max})^{1.5}$ (floor `0.20`) above limit.
+- **Manufacturability**: Wall-thickness sliver check and boundary smoothness.
 
 ## Commands
 

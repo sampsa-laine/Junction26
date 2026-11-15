@@ -2,15 +2,11 @@
 
 | Path | Purpose |
 | --- | --- |
-| `src/junction26/` | Installable Python package |
-| `src/junction26/main.py` | Application entry point |
-| `src/agents/example.py` | Sample function with a doctest |
-| `test/` | Tests (use `unittest`; runnable with pytest) |
-| `pyproject.toml` | Project metadata, command, and uv build configuration |
-| `uv.lock` | Dependency versions managed by uv |
+| `src/agents/` | Core CAD/FEA, SIMP, Oracle, Harbor verifier/CLI, and Streamlit Arena modules |
+| `tasks/` | Generated Harbor v1.4 benchmark tasks (synced via `uv run harbor-tasks sync`) |
+| `jobs/` | Saved Harbor trial runs and `design.json` outputs |
+| `test/` | `unittest` and doctest suite runnable via `uv run pytest` |
+| `doc/` | Project documentation |
+| `pyproject.toml` | Project metadata, CLI script targets, and `uv` dependencies |
 
-Run the application with `uv run junction26`. uv installs the package from `src/` automatically.
-
-Place new tests in `test/` using filenames such as `test_example.py`.
-
-Run `uv run pytest` to execute unittest tests in `test/` and doctests in `test/` and `src/`. pytest is installed as a development dependency. `test/test_example.py` demonstrates a unittest test for the sample function.
+See [arena.md](./arena.md) for the `src/agents/` module breakdown and [harbor.md](./harbor.md) for the benchmark suite.
