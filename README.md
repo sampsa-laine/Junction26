@@ -1,19 +1,50 @@
-# Junction26
+# Junction26 — 2D Structural Design Benchmark
+
+Reinforcement learning and Harbor v1.4 benchmark environment for 2D structural CAD lightweighting with `<15ms` Q4 finite element analysis (FEA) feedback, scored against continuous topological optimization ($C^*$).
+
+## Quick start
+
+```shell
+# 1. Install dependencies (requires Python >= 3.12 and uv)
+uv sync
+
+# 2. Optional: configure API keys for OpenCode / Gemini agent runs
+cp .env.example .env
+
+# 3. Launch the interactive Arena & Inspector
+uv run arena
+```
 
 ## Command cheatsheet
 
 | Command | Purpose |
 | --- | --- |
 | `uv sync` | Install project and development dependencies |
-| `uv run junction26` | Run the application |
 | `uv run arena` | Launch interactive Streamlit Arena & Inspector |
+| `uv run junction26` | Run terminal comparison benchmark |
 | `uv run harbor-tasks sync` | Sync `tasks/*` from `src/agents/` |
-| `uv run harbor-tasks run --task all --agent oracle` | Run Oracle reference across all 3 tasks |
+| `uv run harbor-tasks run --task all --agent oracle` | Run reference implementation across all 4 tasks |
+| `uv run harbor-tasks run --task l-bracket-stress --agent opencode` | Run OpenCode agent (reads `GEMINI_API_KEY` & `HARBOR_MODEL` from `.env`) |
 | `uv run build-site` | Build static showcase site in `site/` |
-| `uv run pytest` | Run unittest tests and doctests |
-| `uv run pytest -v` | Run tests with individual test names |
+| `uv run pytest` | Run `unittest` tests and doctests |
 
-See [project layout and testing](doc/project-layout.md) for details.
+## Running Harbor evaluations
+
+Harbor runs execute inside Docker by default (requires a running Docker daemon) or remotely via Modal (`--env modal`):
+
+```shell
+# Sync sandbox, verifier, and reference modules into tasks/* and lint
+uv run harbor-tasks sync
+uvx harbor lint tasks/*
+
+# Reproduce reference implementation across all 4 tasks
+uv run harbor-tasks run --task all --agent oracle
+
+# Run OpenCode on a single task (or use --task all)
+uv run harbor-tasks run --task suspension-rocker-multiload --agent opencode
+```
+
+Available tasks: `cantilever-lightweight`, `l-bracket-stress`, `suspension-rocker-multiload`, `aerospace-rib-obstacles`.
 
 ## Building the static site
 
@@ -28,28 +59,15 @@ uv run build-site --skip-renders
 python3 -m http.server --directory site 8000
 ```
 
-## Adding `uv` targets
+## Documentation & project layout
 
-Note `junction26 = "junction26.main:main"` in `pyproject.toml`.
-This is just `[targetName] = "[module]:[function]`.
-Then this can be run as `uv run [targetName]`.
-Note that this is equivalent to running `import sys; from [module] import [function]; sys.exit([function]())` in python.
+- [Table of Contents](doc/table-of-contents.md)
+- [Arena & Inspector](doc/arena.md)
+- [Harbor Evaluation Suite](doc/harbor.md)
+- [Project Layout & Testing](doc/project-layout.md)
+
+New CLI targets can be added under `[project.scripts]` in [pyproject.toml](pyproject.toml) (for example, `junction26 = "src.agents.main:main"`).
 
 ## Using Modal to offload tasks
 
-Set up your modal API key, for example with `uv run modal setup`.
-Add `--env modal` to the `[uv run] harbor run ...` command,
-among potential other flags coming after `harbor`.
-
-For testing `modal`, `uv run modal run src/junction26/modaltest.py` should work:
-```
-$ uv run modal run src/junction26/modaltest.py 
-✓ Initialized. View run at https://modal.com/apps/joelkronqvist/main/ap-sD8v22gNIoDH9zftLrS4xD
-✓ Created objects.
-├── ✓ Uploaded /home/school/Dev/Junction26/src/junction26/modaltest.py
-└── ✓ Created Function square.
-This code is running on a remote worker!
-the square is 1764
-Stopping app - local entrypoint completed.
-✓ App completed. View run at https://modal.com/apps/joelkronqvist/main/ap-sD8v22gNIoDH9zftLrS4xD
-```
+Set up your Modal API key with `uv run modal setup`, then pass `--env modal` to `uv run harbor-tasks run ...` or `uv run harbor run ...`.
