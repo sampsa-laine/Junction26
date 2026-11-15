@@ -53,7 +53,7 @@ def _new_figure(figsize: tuple[float, float] = (5.0, 3.2), dpi: int = 110) -> Fi
 
 def _style_dark_axis(ax: Axes) -> None:
     ax.set_facecolor(_BG_PLOT)
-    ax.tick_params(colors=_TEXT_MUTED, labelsize=7)
+    ax.tick_params(colors="#ffffff", labelsize=7)
     ax.xaxis.label.set_color(_TEXT_MUTED)
     ax.yaxis.label.set_color(_TEXT_MUTED)
     ax.title.set_color(_TEXT_PRIMARY)
@@ -489,7 +489,7 @@ def render_fea_field_figure(
         cbar_label = f"{default_label} (limit <= {problem.max_stress_limit:.2f})"
     cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label(cbar_label, fontsize=7.5, color=_TEXT_MUTED)
-    cbar.ax.tick_params(labelsize=7, colors=_TEXT_MUTED)
+    cbar.ax.tick_params(labelsize=7, colors="#ffffff")
     cbar.outline.set_edgecolor(_BORDER)  # type: ignore[attr-defined]
 
     peak_val = float(np.max(finite_values)) if finite_values.size > 0 else 0.0
@@ -606,6 +606,8 @@ def render_replay_trajectory_figure(
     active_step: int | None = None,
 ) -> Figure:
     fig = _new_figure(figsize=(8.0, 2.5), dpi=110)
+    fig.patch.set_facecolor("none")
+    fig.patch.set_alpha(0.0)
     ax_vol, ax_comp, ax_stress = fig.subplots(1, 3)
 
     steps = [f.step for f in frames]
@@ -613,8 +615,17 @@ def render_replay_trajectory_figure(
     comps = [f.compliance for f in frames]
     stresses = [f.max_von_mises_stress for f in frames]
 
+    text_white = "#ffffff"
+    spine_color = (1.0, 1.0, 1.0, 0.45)
     for axis in (ax_vol, ax_comp, ax_stress):
-        _style_dark_axis(axis)
+        axis.set_facecolor("none")
+        axis.patch.set_alpha(0.0)
+        axis.tick_params(colors=text_white, labelsize=7)
+        axis.xaxis.label.set_color(text_white)
+        axis.yaxis.label.set_color(text_white)
+        axis.title.set_color(text_white)
+        for spine in axis.spines.values():
+            spine.set_color(spine_color)
 
     ax_vol.plot(steps, vols, marker="o", color="#22d3ee", linewidth=1.8, markersize=4)
     ax_vol.axhline(
@@ -629,9 +640,9 @@ def render_replay_trajectory_figure(
     ax_vol.legend(
         fontsize=7,
         loc="best",
-        facecolor=_BG_CARD,
-        edgecolor=_BORDER,
-        labelcolor=_TEXT_PRIMARY,
+        facecolor="none",
+        edgecolor=spine_color,
+        labelcolor=text_white,
     )
 
     ax_comp.plot(steps, comps, marker="o", color="#e879f9", linewidth=1.8, markersize=4)
@@ -652,16 +663,16 @@ def render_replay_trajectory_figure(
         ax_stress.legend(
             fontsize=7,
             loc="best",
-            facecolor=_BG_CARD,
-            edgecolor=_BORDER,
-            labelcolor=_TEXT_PRIMARY,
+            facecolor="none",
+            edgecolor=spine_color,
+            labelcolor=text_white,
         )
     ax_stress.set_title("Max Von Mises Stress", fontsize=8.5, fontweight="bold")
     ax_stress.set_xlabel("Step", fontsize=7.5)
 
     if active_step is not None:
         for axis in (ax_vol, ax_comp, ax_stress):
-            axis.axvline(active_step, color=_TEXT_PRIMARY, linestyle=":", linewidth=1.1)
+            axis.axvline(active_step, color=text_white, linestyle=":", linewidth=1.1)
 
     fig.tight_layout()
     return fig
